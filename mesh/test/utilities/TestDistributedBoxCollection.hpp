@@ -409,6 +409,11 @@ public:
 
         DistributedBoxCollection<2> box_collection(width, domain_size);
 
+        // We also want to consider periodic domains
+        DistributedBoxCollection<2> box_collection_pdc_X(width, domain_size,true);
+        DistributedBoxCollection<2> box_collection_pdc_Y(width, domain_size,false,true);
+        DistributedBoxCollection<2> box_collection_pdc_XY(width, domain_size,true,true);
+
         if (PetscTools::GetNumProcs() > 3u)
         {
             TS_ASSERT_EQUALS(Warnings::Instance()->GetNumWarnings(), 1u);
@@ -422,6 +427,9 @@ public:
         TS_ASSERT_EQUALS(box_collection.GetNumBoxes(), expected_number_boxes); // 4 * 3 boxes altogether, normally
 
         box_collection.SetupAllLocalBoxes();
+        box_collection_pdc_X.SetupAllLocalBoxes();
+        box_collection_pdc_Y.SetupAllLocalBoxes();
+        box_collection_pdc_XY.SetupAllLocalBoxes();
 
         if (box_collection.IsBoxOwned(0))
         {
@@ -433,6 +441,22 @@ public:
             correct_answer_0.insert(4); // Halo above
             correct_answer_0.insert(5); // Halo above
             TS_ASSERT_EQUALS(local_boxes_to_box_0, correct_answer_0);
+
+            // Periodic answers
+            std::set<unsigned> correct_answer_0_pdc_X = correct_answer_0;
+            correct_answer_0_pdc_X.insert(3);
+            correct_answer_0_pdc_X.insert(7);
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(0), correct_answer_0_pdc_X);
+
+            std::set<unsigned> correct_answer_0_pdc_Y = correct_answer_0;
+            correct_answer_0_pdc_Y.insert(8);
+            correct_answer_0_pdc_Y.insert(9);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(0), correct_answer_0_pdc_Y);
+
+            std::set<unsigned> correct_answer_0_pdc_XY = correct_answer_0_pdc_X;
+            correct_answer_0_pdc_XY.insert(correct_answer_0_pdc_Y.begin(),correct_answer_0_pdc_Y.end());
+            correct_answer_0_pdc_XY.insert(11);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(0), correct_answer_0_pdc_XY);
         }
         if (box_collection.IsBoxOwned(3))
         {
@@ -443,6 +467,22 @@ public:
             correct_answer_3.insert(6);
             correct_answer_3.insert(7);
             TS_ASSERT_EQUALS(local_boxes_to_box_3, correct_answer_3);
+
+            // Periodic answers
+            std::set<unsigned> correct_answer_3_pdc_X = correct_answer_3;
+            correct_answer_3_pdc_X.insert(0);
+            correct_answer_3_pdc_X.insert(4);
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(3), correct_answer_3_pdc_X);
+
+            std::set<unsigned> correct_answer_3_pdc_Y = correct_answer_3;
+            correct_answer_3_pdc_Y.insert(10);
+            correct_answer_3_pdc_Y.insert(11);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(3), correct_answer_3_pdc_Y);
+
+            std::set<unsigned> correct_answer_3_pdc_XY = correct_answer_3_pdc_X;
+            correct_answer_3_pdc_XY.insert(correct_answer_3_pdc_Y.begin(),correct_answer_3_pdc_Y.end());
+            correct_answer_3_pdc_XY.insert(8);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(3), correct_answer_3_pdc_XY);
         }
         if (box_collection.IsBoxOwned(5))
         {
@@ -458,6 +498,11 @@ public:
             correct_answer_5.insert(9);
             correct_answer_5.insert(10);
             TS_ASSERT_EQUALS(local_boxes_to_box_5, correct_answer_5);
+
+            // Periodic answers should be the same
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(5), correct_answer_5);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(5), correct_answer_5);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(5), correct_answer_5);
         }
         if (box_collection.IsBoxOwned(10))
         {
@@ -477,24 +522,37 @@ public:
                 correct_answer_10.insert(15); // Halo above 11
             }
             TS_ASSERT_EQUALS(local_boxes_to_box_10, correct_answer_10);
+
+            // Periodic answers
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(10), correct_answer_10);
+
+            correct_answer_10.insert(1);
+            correct_answer_10.insert(2);
+            correct_answer_10.insert(3);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(10), correct_answer_10);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(10), correct_answer_10);
         }
     }
 
-
-    void TestSetupAllLocalBoxes2dPeriodicX() throw(Exception)
+    void TestSetupLocalBoxesHalfOnly2d() throw(Exception)
     {
         double width = 1.0;
 
         c_vector<double, 2*2> domain_size;
-        domain_size(0) = 0;
+        domain_size(0) = 0.0;
         domain_size(1) = 4.0;
-        domain_size(2) = 0;
+        domain_size(2) = 0.0;
         domain_size(3) = 3.0;
 
         Warnings::Instance()->QuietDestroy();
         TS_ASSERT_EQUALS(Warnings::Instance()->GetNumWarnings(), 0u);
 
-        DistributedBoxCollection<2> box_collection(width, domain_size, true); // So periodic in X
+        DistributedBoxCollection<2> box_collection(width, domain_size);
+
+        // We also want to consider periodic domains
+        DistributedBoxCollection<2> box_collection_pdc_X(width, domain_size,true);
+        DistributedBoxCollection<2> box_collection_pdc_Y(width, domain_size,false,true);
+        DistributedBoxCollection<2> box_collection_pdc_XY(width, domain_size,true,true);
 
         if (PetscTools::GetNumProcs() > 3u)
         {
@@ -508,7 +566,11 @@ public:
         unsigned expected_number_boxes = 4u * std::max(3u, PetscTools::GetNumProcs());
         TS_ASSERT_EQUALS(box_collection.GetNumBoxes(), expected_number_boxes); // 4 * 3 boxes altogether, normally
 
-        box_collection.SetupAllLocalBoxes();
+        box_collection.SetupLocalBoxesHalfOnly();
+        box_collection_pdc_X.SetupLocalBoxesHalfOnly();
+        box_collection_pdc_Y.SetupLocalBoxesHalfOnly();
+        box_collection_pdc_XY.SetupLocalBoxesHalfOnly();
+
         if (box_collection.IsBoxOwned(0))
         {
             std::set<unsigned>& local_boxes_to_box_0 = box_collection.rGetLocalBoxes(0);
@@ -516,47 +578,70 @@ public:
             std::set<unsigned> correct_answer_0;
             correct_answer_0.insert(0);
             correct_answer_0.insert(1);
-            correct_answer_0.insert(3);
-            correct_answer_0.insert(4);
-            correct_answer_0.insert(5);
-            correct_answer_0.insert(7);
+            correct_answer_0.insert(4); // Halo above
+            correct_answer_0.insert(5); // Halo above
             TS_ASSERT_EQUALS(local_boxes_to_box_0, correct_answer_0);
+
+            // Periodic answers
+            std::set<unsigned> correct_answer_0_pdc_X = correct_answer_0;
+            correct_answer_0_pdc_X.insert(3);
+            correct_answer_0_pdc_X.insert(7);
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(0), correct_answer_0_pdc_X);
+
+            std::set<unsigned> correct_answer_0_pdc_Y = correct_answer_0;
+            correct_answer_0_pdc_Y.insert(8);
+            correct_answer_0_pdc_Y.insert(9);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(0), correct_answer_0_pdc_Y);
+
+            std::set<unsigned> correct_answer_0_pdc_XY = correct_answer_0_pdc_X;
+            correct_answer_0_pdc_XY.insert(correct_answer_0_pdc_Y.begin(),correct_answer_0_pdc_Y.end());
+            correct_answer_0_pdc_XY.insert(11);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(0), correct_answer_0_pdc_XY);
         }
         if (box_collection.IsBoxOwned(3))
         {
             std::set<unsigned>& local_boxes_to_box_3 = box_collection.rGetLocalBoxes(3);
             std::set<unsigned> correct_answer_3;
-            correct_answer_3.insert(0);
-            correct_answer_3.insert(2);
             correct_answer_3.insert(3);
-            correct_answer_3.insert(4);
             correct_answer_3.insert(6);
             correct_answer_3.insert(7);
             TS_ASSERT_EQUALS(local_boxes_to_box_3, correct_answer_3);
+
+            // Periodic answers
+            std::set<unsigned> correct_answer_3_pdc_X = correct_answer_3;
+            correct_answer_3_pdc_X.insert(4);
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(3), correct_answer_3_pdc_X);
+
+            std::set<unsigned> correct_answer_3_pdc_Y = correct_answer_3;
+            correct_answer_3_pdc_Y.insert(10);
+            correct_answer_3_pdc_Y.insert(11);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(3), correct_answer_3_pdc_Y);
+
+            std::set<unsigned> correct_answer_3_pdc_XY = correct_answer_3_pdc_X;
+            correct_answer_3_pdc_XY.insert(correct_answer_3_pdc_Y.begin(),correct_answer_3_pdc_Y.end());
+            correct_answer_3_pdc_XY.insert(8);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(3), correct_answer_3_pdc_XY);
         }
         if (box_collection.IsBoxOwned(5))
         {
             std::set<unsigned>& local_boxes_to_box_5 = box_collection.rGetLocalBoxes(5);
             std::set<unsigned> correct_answer_5;
-            correct_answer_5.insert(0);
-            correct_answer_5.insert(1);
-            correct_answer_5.insert(2);
-            correct_answer_5.insert(4);
             correct_answer_5.insert(5);
             correct_answer_5.insert(6);
             correct_answer_5.insert(8);
             correct_answer_5.insert(9);
             correct_answer_5.insert(10);
             TS_ASSERT_EQUALS(local_boxes_to_box_5, correct_answer_5);
+
+            // Periodic answers should be the same
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(5), correct_answer_5);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(5), correct_answer_5);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(5), correct_answer_5);
         }
         if (box_collection.IsBoxOwned(10))
         {
             std::set<unsigned>& local_boxes_to_box_10 = box_collection.rGetLocalBoxes(10);
             std::set<unsigned> correct_answer_10;
-            correct_answer_10.insert(5);
-            correct_answer_10.insert(6);
-            correct_answer_10.insert(7);
-            correct_answer_10.insert(9);
             correct_answer_10.insert(10);
             correct_answer_10.insert(11);
             if (PetscTools::GetNumProcs() > 3u)
@@ -567,251 +652,13 @@ public:
                 correct_answer_10.insert(15); // Halo above 11
             }
             TS_ASSERT_EQUALS(local_boxes_to_box_10, correct_answer_10);
-        }
-        if (box_collection.IsBoxOwned(11))
-        {
-            std::set<unsigned>& local_boxes_to_box_11 = box_collection.rGetLocalBoxes(11);
-            std::set<unsigned> correct_answer_11;
-            correct_answer_11.insert(4);
-            correct_answer_11.insert(6);
-            correct_answer_11.insert(7);
-            correct_answer_11.insert(8);
-            correct_answer_11.insert(10);
-            correct_answer_11.insert(11);
-            if (PetscTools::GetNumProcs() > 3u)
-            {
-                // There's a process (spinning) which requires an extra halo slice (12, 13, 14, 15)
-                correct_answer_11.insert(14); // Halo above 10
-                correct_answer_11.insert(15); // Halo above 11
-                correct_answer_11.insert(12); // Halo above 8 (Periodic in x)
-            }
-           TS_ASSERT_EQUALS(local_boxes_to_box_11, correct_answer_11);
+
+            // Periodic answers
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(10), correct_answer_10);
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(10), correct_answer_10);
+            TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(10), correct_answer_10);
         }
     }
-
-    void TestSetupAllLocalBoxes2dPeriodicY() throw(Exception)
-    {
-        double width = 1.0;
-
-        c_vector<double, 2*2> domain_size;
-        domain_size(0) = 0;
-        domain_size(1) = 4.0;
-        domain_size(2) = 0;
-        domain_size(3) = 3.0;
-
-        Warnings::Instance()->QuietDestroy();
-        TS_ASSERT_EQUALS(Warnings::Instance()->GetNumWarnings(), 0u);
-
-        DistributedBoxCollection<2> box_collection(width, domain_size, false, true, false); // So periodic in Y only
-
-        if (PetscTools::GetNumProcs() > 3u)
-        {
-            TS_ASSERT_EQUALS(Warnings::Instance()->GetNumWarnings(), 1u);
-            TS_ASSERT_EQUALS(Warnings::Instance()->GetNextWarningMessage(),
-                             "There are more processes than convenient for the domain/mesh/box size.  The domain size has been swollen.");
-            Warnings::Instance()->QuietDestroy();
-        }
-        // Number of slices is 3, unless there are more than 3 processes.
-        // Hence the expected number of boxes is 12, but will grow with the number of processes.
-        unsigned expected_number_boxes = 4u * std::max(3u, PetscTools::GetNumProcs());
-        TS_ASSERT_EQUALS(box_collection.GetNumBoxes(), expected_number_boxes); // 4 * 3 boxes altogether, normally
-
-        box_collection.SetupAllLocalBoxes();
-        if (box_collection.IsBoxOwned(0))
-        {
-            std::set<unsigned>& local_boxes_to_box_0 = box_collection.rGetLocalBoxes(0);
-
-            std::set<unsigned> correct_answer_0;
-            correct_answer_0.insert(0);
-            correct_answer_0.insert(1);
-            correct_answer_0.insert(4);
-            correct_answer_0.insert(5);
-            correct_answer_0.insert(8);
-            correct_answer_0.insert(9);
-            TS_ASSERT_EQUALS(local_boxes_to_box_0, correct_answer_0);
-        }
-        if (box_collection.IsBoxOwned(3))
-        {
-            std::set<unsigned>& local_boxes_to_box_3 = box_collection.rGetLocalBoxes(3);
-            std::set<unsigned> correct_answer_3;
-            correct_answer_3.insert(2);
-            correct_answer_3.insert(3);
-            correct_answer_3.insert(6);
-            correct_answer_3.insert(7);
-            correct_answer_3.insert(10);
-            correct_answer_3.insert(11);
-            TS_ASSERT_EQUALS(local_boxes_to_box_3, correct_answer_3);
-        }
-        if (box_collection.IsBoxOwned(5))
-        {
-            std::set<unsigned>& local_boxes_to_box_5 = box_collection.rGetLocalBoxes(5);
-            std::set<unsigned> correct_answer_5;
-            correct_answer_5.insert(0);
-            correct_answer_5.insert(1);
-            correct_answer_5.insert(2);
-            correct_answer_5.insert(4);
-            correct_answer_5.insert(5);
-            correct_answer_5.insert(6);
-            correct_answer_5.insert(8);
-            correct_answer_5.insert(9);
-            correct_answer_5.insert(10);
-            TS_ASSERT_EQUALS(local_boxes_to_box_5, correct_answer_5);
-        }
-        if (box_collection.IsBoxOwned(10))
-        {
-            std::set<unsigned>& local_boxes_to_box_10 = box_collection.rGetLocalBoxes(10);
-            std::set<unsigned> correct_answer_10;
-            correct_answer_10.insert(1);
-            correct_answer_10.insert(2);
-            correct_answer_10.insert(3);
-            correct_answer_10.insert(5);
-            correct_answer_10.insert(6);
-            correct_answer_10.insert(7);
-            correct_answer_10.insert(9);
-            correct_answer_10.insert(10);
-            correct_answer_10.insert(11);
-            if (PetscTools::GetNumProcs() > 3u)
-            {
-                // There's a process (spinning) which requires an extra halo slice
-                EXCEPTION("No consideration of halo boxes yet\n");
-            }
-            TS_ASSERT_EQUALS(local_boxes_to_box_10, correct_answer_10);
-        }
-        if (box_collection.IsBoxOwned(11))
-        {
-            std::set<unsigned>& local_boxes_to_box_11 = box_collection.rGetLocalBoxes(11);
-            std::set<unsigned> correct_answer_11;
-            correct_answer_11.insert(2);
-            correct_answer_11.insert(3);
-            correct_answer_11.insert(6);
-            correct_answer_11.insert(7);
-            correct_answer_11.insert(10);
-            correct_answer_11.insert(11);
-            if (PetscTools::GetNumProcs() > 3u)
-            {
-                // There's a process (spinning) which requires an extra halo slice
-                EXCEPTION("No consideration of halo boxes yet\n");
-            }
-           TS_ASSERT_EQUALS(local_boxes_to_box_11, correct_answer_11);
-        }
-    }
-
-    void TestSetupLocalBoxes2dPeriodicXY() throw(Exception)
-    {
-        double width = 1.0;
-
-        c_vector<double, 2*2> domain_size;
-        domain_size(0) = 0;
-        domain_size(1) = 4.0;
-        domain_size(2) = 0;
-        domain_size(3) = 3.0;
-
-        Warnings::Instance()->QuietDestroy();
-        TS_ASSERT_EQUALS(Warnings::Instance()->GetNumWarnings(), 0u);
-
-        DistributedBoxCollection<2> box_collection(width, domain_size, true, true, false); // So periodic in Y only
-
-        if (PetscTools::GetNumProcs() > 3u)
-        {
-            TS_ASSERT_EQUALS(Warnings::Instance()->GetNumWarnings(), 1u);
-            TS_ASSERT_EQUALS(Warnings::Instance()->GetNextWarningMessage(),
-                             "There are more processes than convenient for the domain/mesh/box size.  The domain size has been swollen.");
-            Warnings::Instance()->QuietDestroy();
-        }
-        // Number of slices is 3, unless there are more than 3 processes.
-        // Hence the expected number of boxes is 12, but will grow with the number of processes.
-        unsigned expected_number_boxes = 4u * std::max(3u, PetscTools::GetNumProcs());
-        TS_ASSERT_EQUALS(box_collection.GetNumBoxes(), expected_number_boxes); // 4 * 3 boxes altogether, normally
-
-        box_collection.SetupAllLocalBoxes();
-        if (box_collection.IsBoxOwned(0))
-        {
-            std::set<unsigned>& local_boxes_to_box_0 = box_collection.rGetLocalBoxes(0);
-
-            std::set<unsigned> correct_answer_0;
-            correct_answer_0.insert(0);
-            correct_answer_0.insert(1);
-            correct_answer_0.insert(3);
-            correct_answer_0.insert(4);
-            correct_answer_0.insert(5);
-            correct_answer_0.insert(7);
-            correct_answer_0.insert(8);
-            correct_answer_0.insert(9);
-            correct_answer_0.insert(11);
-            TS_ASSERT_EQUALS(local_boxes_to_box_0, correct_answer_0);
-        }
-        if (box_collection.IsBoxOwned(3))
-        {
-            std::set<unsigned>& local_boxes_to_box_3 = box_collection.rGetLocalBoxes(3);
-            std::set<unsigned> correct_answer_3;
-            correct_answer_3.insert(0);
-            correct_answer_3.insert(2);
-            correct_answer_3.insert(3);
-            correct_answer_3.insert(4);
-            correct_answer_3.insert(6);
-            correct_answer_3.insert(7);
-            correct_answer_3.insert(8);
-            correct_answer_3.insert(10);
-            correct_answer_3.insert(11);
-            TS_ASSERT_EQUALS(local_boxes_to_box_3, correct_answer_3);
-        }
-        if (box_collection.IsBoxOwned(5))
-        {
-            std::set<unsigned>& local_boxes_to_box_5 = box_collection.rGetLocalBoxes(5);
-            std::set<unsigned> correct_answer_5;
-            correct_answer_5.insert(0);
-            correct_answer_5.insert(1);
-            correct_answer_5.insert(2);
-            correct_answer_5.insert(4);
-            correct_answer_5.insert(5);
-            correct_answer_5.insert(6);
-            correct_answer_5.insert(8);
-            correct_answer_5.insert(9);
-            correct_answer_5.insert(10);
-            TS_ASSERT_EQUALS(local_boxes_to_box_5, correct_answer_5);
-        }
-        if (box_collection.IsBoxOwned(10))
-        {
-            std::set<unsigned>& local_boxes_to_box_10 = box_collection.rGetLocalBoxes(10);
-            std::set<unsigned> correct_answer_10;
-            correct_answer_10.insert(1);
-            correct_answer_10.insert(2);
-            correct_answer_10.insert(3);
-            correct_answer_10.insert(5);
-            correct_answer_10.insert(6);
-            correct_answer_10.insert(7);
-            correct_answer_10.insert(9);
-            correct_answer_10.insert(10);
-            correct_answer_10.insert(11);
-            if (PetscTools::GetNumProcs() > 3u)
-            {
-                // There's a process (spinning) which requires an extra halo slice
-                EXCEPTION("No consideration of halo boxes yet\n");
-            }
-            TS_ASSERT_EQUALS(local_boxes_to_box_10, correct_answer_10);
-        }
-        if (box_collection.IsBoxOwned(11))
-        {
-            std::set<unsigned>& local_boxes_to_box_11 = box_collection.rGetLocalBoxes(11);
-            std::set<unsigned> correct_answer_11;
-            correct_answer_11.insert(0);
-            correct_answer_11.insert(2);
-            correct_answer_11.insert(3);
-            correct_answer_11.insert(4);
-            correct_answer_11.insert(6);
-            correct_answer_11.insert(7);
-            correct_answer_11.insert(8);
-            correct_answer_11.insert(10);
-            correct_answer_11.insert(11);
-            if (PetscTools::GetNumProcs() > 3u)
-            {
-                // There's a process (spinning) which requires an extra halo slice
-                EXCEPTION("No consideration of halo boxes yet\n");
-            }
-           TS_ASSERT_EQUALS(local_boxes_to_box_11, correct_answer_11);
-        }
-    }
-
 
     void TestSetupAllLocalBoxes3d() throw(Exception)
     {
@@ -828,13 +675,22 @@ public:
         domain_size(2) = 0;
         domain_size(3) = 3.0;
         domain_size(4) = 0;
-        domain_size(5) = 2.0;
+        domain_size(5) = 5.0;
 
         DistributedBoxCollection<3> box_collection(width, domain_size);
 
-        assert(box_collection.GetNumBoxes()==24); // 4 * 3 * 2 boxes altogether
+        // Also want to look at periodic in z box collections
+        DistributedBoxCollection<3> box_collection_pdc_Z(width, domain_size,false,false,true);
+        DistributedBoxCollection<3> box_collection_pdc_XZ(width, domain_size,true,false,true);
+        DistributedBoxCollection<3> box_collection_pdc_XYZ(width, domain_size,true,true,true);
+
+        assert(box_collection.GetNumBoxes()==60); // 4 * 3 * 5 boxes altogether
 
         box_collection.SetupAllLocalBoxes();
+        box_collection_pdc_Z.SetupAllLocalBoxes();
+        box_collection_pdc_XZ.SetupAllLocalBoxes();
+        box_collection_pdc_XYZ.SetupAllLocalBoxes();
+
         if (box_collection.IsBoxOwned(0))
         {
             std::set<unsigned>& local_boxes_to_box_0 = box_collection.rGetLocalBoxes(0);
@@ -849,6 +705,32 @@ public:
             correct_answer_0.insert(16);
             correct_answer_0.insert(17);
             TS_ASSERT_EQUALS(local_boxes_to_box_0, correct_answer_0);
+
+            // Now look at the periodic
+            correct_answer_0.insert(48);
+            correct_answer_0.insert(49);
+            correct_answer_0.insert(52);
+            correct_answer_0.insert(53);
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(0), correct_answer_0);
+
+            correct_answer_0.insert(3);
+            correct_answer_0.insert(7);
+            correct_answer_0.insert(15);
+            correct_answer_0.insert(19);
+            correct_answer_0.insert(51);
+            correct_answer_0.insert(55);
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(0), correct_answer_0);
+
+            correct_answer_0.insert(8);
+            correct_answer_0.insert(9);
+            correct_answer_0.insert(11);
+            correct_answer_0.insert(20);
+            correct_answer_0.insert(21);
+            correct_answer_0.insert(23);
+            correct_answer_0.insert(56);
+            correct_answer_0.insert(57);
+            correct_answer_0.insert(59);
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(0), correct_answer_0);
         }
         if (box_collection.IsBoxOwned(3))
         {
@@ -888,6 +770,21 @@ public:
             correct_answer_5.insert(22);
 
             TS_ASSERT_EQUALS(local_boxes_to_box_5, correct_answer_5);
+
+            // Now look at the periodic
+            correct_answer_5.insert(48);
+            correct_answer_5.insert(49);
+            correct_answer_5.insert(50);
+            correct_answer_5.insert(52);
+            correct_answer_5.insert(53);
+            correct_answer_5.insert(54);
+            correct_answer_5.insert(56);
+            correct_answer_5.insert(57);
+            correct_answer_5.insert(58);
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(5), correct_answer_5);
+
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(5), correct_answer_5);
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(5), correct_answer_5);
         }
         if (box_collection.IsBoxOwned(19))
         {
@@ -905,25 +802,237 @@ public:
             correct_answer_19.insert(19);
             correct_answer_19.insert(22);
             correct_answer_19.insert(23);
+            correct_answer_19.insert(26);
+            correct_answer_19.insert(27);
+            correct_answer_19.insert(30);
+            correct_answer_19.insert(31);
+            correct_answer_19.insert(34);
+            correct_answer_19.insert(35);
             TS_ASSERT_EQUALS(local_boxes_to_box_19, correct_answer_19);
+
+            // Now look at the periodic
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(19), correct_answer_19);
+            correct_answer_19.insert(0);
+            correct_answer_19.insert(4);
+            correct_answer_19.insert(8);
+            correct_answer_19.insert(12);
+            correct_answer_19.insert(16);
+            correct_answer_19.insert(20);
+            correct_answer_19.insert(24);
+            correct_answer_19.insert(28);
+            correct_answer_19.insert(32);
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(19), correct_answer_19);
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(19), correct_answer_19);
         }
-        if (box_collection.IsBoxOwned(22))
+        if (box_collection.IsBoxOwned(58))
         {
-            std::set<unsigned>& local_boxes_to_box_22 = box_collection.rGetLocalBoxes(22);
-            std::set<unsigned> correct_answer_22;
-            correct_answer_22.insert(5);
-            correct_answer_22.insert(6);
-            correct_answer_22.insert(7);
-            correct_answer_22.insert(9);
-            correct_answer_22.insert(10);
-            correct_answer_22.insert(11);
-            correct_answer_22.insert(17);
-            correct_answer_22.insert(18);
-            correct_answer_22.insert(19);
-            correct_answer_22.insert(21);
-            correct_answer_22.insert(22);
-            correct_answer_22.insert(23);
-            TS_ASSERT_EQUALS(local_boxes_to_box_22, correct_answer_22);
+            std::set<unsigned>& local_boxes_to_box_58 = box_collection.rGetLocalBoxes(58);
+            std::set<unsigned> correct_answer_58;
+            correct_answer_58.insert(41);
+            correct_answer_58.insert(42);
+            correct_answer_58.insert(43);
+            correct_answer_58.insert(45);
+            correct_answer_58.insert(46);
+            correct_answer_58.insert(47);
+            correct_answer_58.insert(53);
+            correct_answer_58.insert(54);
+            correct_answer_58.insert(55);
+            correct_answer_58.insert(57);
+            correct_answer_58.insert(58);
+            correct_answer_58.insert(59);
+            TS_ASSERT_EQUALS(local_boxes_to_box_58, correct_answer_58);
+
+            // Now look at the periodic
+            correct_answer_58.insert(5);
+            correct_answer_58.insert(6);
+            correct_answer_58.insert(7);
+            correct_answer_58.insert(9);
+            correct_answer_58.insert(10);
+            correct_answer_58.insert(11);
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(58), correct_answer_58);
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(58), correct_answer_58);
+            correct_answer_58.insert(1);
+            correct_answer_58.insert(2);
+            correct_answer_58.insert(3);
+            correct_answer_58.insert(37);
+            correct_answer_58.insert(38);
+            correct_answer_58.insert(39);
+            correct_answer_58.insert(45);
+            correct_answer_58.insert(46);
+            correct_answer_58.insert(47);
+            correct_answer_58.insert(49);
+            correct_answer_58.insert(50);
+            correct_answer_58.insert(51);
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(58), correct_answer_58);
+        }
+
+    }
+
+    void TestSetupLocalBoxesHalfOnly3d() throw(Exception)
+    {
+        if (PetscTools::GetNumProcs() > 2)
+        {
+            TS_TRACE("This test is only designed for up to 2 processes");
+            return;
+        }
+        double width = 1.0;
+
+        c_vector<double, 2*3> domain_size;
+        domain_size(0) = 0;
+        domain_size(1) = 4.0;
+        domain_size(2) = 0;
+        domain_size(3) = 3.0;
+        domain_size(4) = 0;
+        domain_size(5) = 5.0;
+
+        DistributedBoxCollection<3> box_collection(width, domain_size);
+
+        // Also want to look at periodic in z box collections
+        DistributedBoxCollection<3> box_collection_pdc_Z(width, domain_size,false,false,true);
+        DistributedBoxCollection<3> box_collection_pdc_XZ(width, domain_size,true,false,true);
+        DistributedBoxCollection<3> box_collection_pdc_XYZ(width, domain_size,true,true,true);
+
+        assert(box_collection.GetNumBoxes()==60); // 4 * 3 * 5 boxes altogether
+
+        box_collection.SetupLocalBoxesHalfOnly();
+        box_collection_pdc_Z.SetupLocalBoxesHalfOnly();
+        box_collection_pdc_XZ.SetupLocalBoxesHalfOnly();
+        box_collection_pdc_XYZ.SetupLocalBoxesHalfOnly();
+
+        if (box_collection.IsBoxOwned(0))
+        {
+            std::set<unsigned>& local_boxes_to_box_0 = box_collection.rGetLocalBoxes(0);
+
+            std::set<unsigned> correct_answer_0;
+            correct_answer_0.insert(0);
+            correct_answer_0.insert(1);
+            correct_answer_0.insert(4);
+            correct_answer_0.insert(5);
+            correct_answer_0.insert(12);
+            correct_answer_0.insert(13);
+            correct_answer_0.insert(16);
+            correct_answer_0.insert(17);
+            TS_ASSERT_EQUALS(local_boxes_to_box_0, correct_answer_0);
+
+            // Now look at the periodic
+            correct_answer_0.insert(49);
+            correct_answer_0.insert(52);
+            correct_answer_0.insert(53);
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(0), correct_answer_0);
+
+            correct_answer_0.insert(7);
+            correct_answer_0.insert(16);
+            correct_answer_0.insert(17);
+            correct_answer_0.insert(19);
+            correct_answer_0.insert(55);
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(0), correct_answer_0);
+
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(0), correct_answer_0);
+        }
+        if (box_collection.IsBoxOwned(3))
+        {
+            std::set<unsigned>& local_boxes_to_box_3 = box_collection.rGetLocalBoxes(3);
+            std::set<unsigned> correct_answer_3;
+            correct_answer_3.insert(3);
+            correct_answer_3.insert(6);
+            correct_answer_3.insert(7);
+            correct_answer_3.insert(15);
+            correct_answer_3.insert(18);
+            correct_answer_3.insert(19);
+            TS_ASSERT_EQUALS(local_boxes_to_box_3, correct_answer_3);
+
+            // Now look at the periodic
+            correct_answer_3.insert(54);
+            correct_answer_3.insert(55);
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(3), correct_answer_3);
+
+            correct_answer_3.insert(0);
+            correct_answer_3.insert(4);
+            correct_answer_3.insert(12);
+            correct_answer_3.insert(16);
+            correct_answer_3.insert(48);
+            correct_answer_3.insert(52);
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(3), correct_answer_3);
+
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(3), correct_answer_3);
+        }
+        if (box_collection.IsBoxOwned(5))
+        {
+            std::set<unsigned>& local_boxes_to_box_5 = box_collection.rGetLocalBoxes(5);
+            std::set<unsigned> correct_answer_5;
+            correct_answer_5.insert(5);
+            correct_answer_5.insert(6);
+            correct_answer_5.insert(8);
+            correct_answer_5.insert(9);
+            correct_answer_5.insert(10);
+            correct_answer_5.insert(17);
+            correct_answer_5.insert(18);
+            correct_answer_5.insert(20);
+            correct_answer_5.insert(21);
+            correct_answer_5.insert(22);
+            TS_ASSERT_EQUALS(local_boxes_to_box_5, correct_answer_5);
+
+            // Now look at the periodic
+            correct_answer_5.insert(54);
+            correct_answer_5.insert(56);
+            correct_answer_5.insert(57);
+            correct_answer_5.insert(58);
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(5), correct_answer_5);
+
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(5), correct_answer_5);
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(5), correct_answer_5);
+        }
+        if (box_collection.IsBoxOwned(19))
+        {
+            std::set<unsigned>& local_boxes_to_box_19 = box_collection.rGetLocalBoxes(19);
+            std::set<unsigned> correct_answer_19;
+            correct_answer_19.insert(10);
+            correct_answer_19.insert(11);
+            correct_answer_19.insert(19);
+            correct_answer_19.insert(22);
+            correct_answer_19.insert(23);
+            correct_answer_19.insert(31);
+            correct_answer_19.insert(34);
+            correct_answer_19.insert(35);
+            TS_ASSERT_EQUALS(local_boxes_to_box_19, correct_answer_19);
+
+            // Now look at the periodic
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(19), correct_answer_19);
+            correct_answer_19.insert(4);
+            correct_answer_19.insert(8);
+            correct_answer_19.insert(16);
+            correct_answer_19.insert(20);
+            correct_answer_19.insert(28);
+            correct_answer_19.insert(32);
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(19), correct_answer_19);
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(19), correct_answer_19);
+        }
+        if (box_collection.IsBoxOwned(58))
+        {
+            std::set<unsigned>& local_boxes_to_box_58 = box_collection.rGetLocalBoxes(58);
+            std::set<unsigned> correct_answer_58;
+            correct_answer_58.insert(47);
+            correct_answer_58.insert(58);
+            correct_answer_58.insert(59);
+            TS_ASSERT_EQUALS(local_boxes_to_box_58, correct_answer_58);
+
+            // Now look at the periodic
+            correct_answer_58.insert(10);
+            correct_answer_58.insert(11);
+            TS_ASSERT_EQUALS(box_collection_pdc_Z.rGetLocalBoxes(58), correct_answer_58);
+
+            TS_ASSERT_EQUALS(box_collection_pdc_XZ.rGetLocalBoxes(58), correct_answer_58);
+
+            correct_answer_58.insert(1);
+            correct_answer_58.insert(2);
+            correct_answer_58.insert(3);
+            correct_answer_58.insert(37);
+            correct_answer_58.insert(38);
+            correct_answer_58.insert(39);
+            correct_answer_58.insert(49);
+            correct_answer_58.insert(50);
+            correct_answer_58.insert(51);
+            TS_ASSERT_EQUALS(box_collection_pdc_XYZ.rGetLocalBoxes(58), correct_answer_58);
         }
 
     }
@@ -2229,34 +2338,57 @@ public:
         }  
 
         std::set< std::pair<Node<2>*, Node<2>* > > pairs_should_be;
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[0],nodes[1]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[0],nodes[1]));
 
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[2],nodes[7]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[2],nodes[8]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[2],nodes[7]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[2],nodes[8]));
+
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[4]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[5]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[7]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[8]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[2]));
+
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[5]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[7]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[8]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[2]));
+
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[6]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[7]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[8]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[2]));
+
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[6],nodes[7]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[6],nodes[8]));
+
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[7],nodes[8]));
+
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[9],nodes[0]));
+        // pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[9],nodes[1]));
+
 
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[4]));
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[5]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[7]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[8]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[2]));
-
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[5]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[7]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[8]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[2]));
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[2]));
-
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[7]));     
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[7]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[3],nodes[8]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[4],nodes[8]));
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[6]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[2]));
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[7]));
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[8]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[5],nodes[2]));
-
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[6],nodes[7]));
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[6],nodes[8]));
-
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[2],nodes[7]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[2],nodes[8]));
         pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[7],nodes[8]));
-
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[9],nodes[0]));
-        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[9],nodes[1]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[0],nodes[1]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[0],nodes[9]));
+        pairs_should_be.insert(std::pair<Node<2>*, Node<2>*>(nodes[1],nodes[9]));
 
         TS_ASSERT_EQUALS(pairs_should_be.size(), pairs_returned.size());
         TS_ASSERT_EQUALS(pairs_should_be, pairs_returned);
