@@ -572,701 +572,209 @@ void DistributedBoxCollection<DIM>::SetupLocalBoxesHalfOnly()
             }
             case 2:
             {
-                // We only need to look for neighbours in the current box and half the neighbouring boxes plus some others for halos
+                // Clear the local boxes
                 mLocalBoxes.clear();
 
-                for (unsigned global_index = mMinBoxIndex; global_index<mMaxBoxIndex+1; global_index++)
+                // Now we need to work out the min and max y indices
+                unsigned j_start = CalculateGridIndices(mMinBoxIndex)(1);
+                unsigned j_end = CalculateGridIndices(mMaxBoxIndex)(1);
+                // Determine the number of boxes in each direction
+                unsigned nI = mNumBoxesEachDirection(0);
+                unsigned nJ = mNumBoxesEachDirection(1);
+                // Locally store the bottom processor row
+                unsigned bottom_proc = mpDistributedBoxStackFactory->GetLow();
+                unsigned top_proc = mpDistributedBoxStackFactory->GetHigh();
+                
+                // Outer loop: over y
+                for ( unsigned j = j_start; j < (j_end+1); j++ )
                 {
-                    std::set<unsigned> local_boxes;
-
-                    // Set up bools to find out where we are
-                    bool left = (global_index%mNumBoxesEachDirection(0) == 0);
-                    bool right = (global_index%mNumBoxesEachDirection(0) == mNumBoxesEachDirection(0)-1);
-                    bool top = !(global_index < mNumBoxesEachDirection(0)*mNumBoxesEachDirection(1) - mNumBoxesEachDirection(0));
-                    bool bottom = (global_index < mNumBoxesEachDirection(0));
-                    bool bottom_proc = (CalculateGridIndices(global_index)[1] == mpDistributedBoxStackFactory->GetLow());
-
-                    // Insert the current box
-                    local_boxes.insert(global_index);
-
-                    // If we're on the bottom of the process boundary, but not the bottom of the domain add boxes below
-                    if(!bottom && bottom_proc)
+                    // Inner loop: over x
+                    for ( unsigned i = 0; i < nI; i++ )
                     {
-                        local_boxes.insert(global_index - mNumBoxesEachDirection(0));
-                        if(!left)
+                        std::set<unsigned> local_boxes;
+                        /* We want to add (for non-boundary)
+                        (i-1,j+1) (i,j+1) (i+1,j+1)
+                                    (i,j)   (i+1,j)   */
+                        
+                        int j_mod = j; // This is used to account for y periodic boundaries
+                        // The min ensures we don't go above the top boundary
+                        for ( int dj = 0; dj < std::min((int)nJ-j_mod,(int)2); dj++ )
                         {
-                            local_boxes.insert(global_index - mNumBoxesEachDirection(0) - 1);
+                            // The -1*dj ensures we get the upper left, the max ensures we don't hit the left boundary, 
+                            // the min ensures we don't hit the right boundary
+                            for ( int boxi = std::max((int)i-1*dj,(int)0); boxi < std::min((int)i+2,(int)nI); boxi++ )
+                            {
+                                local_boxes.insert( (j_mod+dj)*nI + boxi );
+                            }
+                            // Add in the x periodicity at the right boundary, we then want: (0,j) and (0,j+1)
+                            if ( i==(nI-1) && mIsPeriodicInX )
+                            {
+                                local_boxes.insert( (j_mod+dj)*nI );
+                            }
+                            // If the y boundary is periodic, the new j level is the bottom row; we use jmod to adjust 
+                            // for this to adjust for dj = 1
+                            if ( mIsPeriodicInY && j == (nJ-1) )
+                            {
+                                j_mod = -1;
+                            }
+                            // If we are on the bottom of the processor, we may need to add the row below
+                            if ( dj == 1 && j == bottom_proc )
+                            {
+                                if ( j==0 && mIsPeriodicInY && top_proc < nJ )
+                                {
+                                    // We are at the bottom of the domain and the top row is on a different process
+                                    j_mod = nJ-2;
+                                    dj = 0;
+                                }
+                                else if ( j > 0 )
+                                {
+                                    // If we at the bottom of a process but not the domain
+                                    j_mod = j-2;
+                                    dj = 0;
+                                }
+                            }
                         }
-                        if(!right)
+                        // Now add the left-upper box if x periodic and on the boundary
+                        if ( mIsPeriodicInX && i == 0 )
                         {
-                            local_boxes.insert(global_index - mNumBoxesEachDirection(0) + 1);
+                            if ( j < (nJ-1) )
+                            {
+                                local_boxes.insert( (j+2)*nI - 1 );
+                                if ( j==0 && mIsPeriodicInY && top_proc < nJ )
+                                {
+                                    local_boxes.insert( nI*nJ - 1 );
+                                }
+                            }
+                            else if ( mIsPeriodicInY )
+                            {
+                                local_boxes.insert( nI-1 );
+                            }
                         }
-                    }
-                    // If we're not at the top of the domain insert boxes above
-                    if(!top)
-                    {
-                        local_boxes.insert(global_index + mNumBoxesEachDirection(0));
-                        if(!right)
-                        {
-                            local_boxes.insert(global_index + mNumBoxesEachDirection(0) + 1);
-                        }
-                        if(!left)
-                        {
-                            local_boxes.insert(global_index + mNumBoxesEachDirection(0) - 1);
-                        }
-                    }
 
-                    // If we're not on the far right hand side insert box to the right
-                    if(!right)
-                    {
-                        local_boxes.insert(global_index + 1);
+                        // Add to the local boxes
+                        mLocalBoxes.push_back(local_boxes);
                     }
-
-                    // Now add the periodicity
-                    if ( mIsPeriodicInX && left )
-                    {
-                        // Add the box on the far right
-                        local_boxes.insert( global_index + mNumBoxesEachDirection(0) - 1 );
-                        // Also add the box above if not at the top
-                        if ( !top )
-                        {
-                            local_boxes.insert( global_index + 2*mNumBoxesEachDirection(0) - 1 );
-                        }
-                        // Add the box below if it is on a different processor
-                        if ( bottom_proc && !bottom )
-                        {
-                            local_boxes.insert( global_index - 1 );
-                        }
-                    }
-
-                    if ( mIsPeriodicInX && right )
-                    {
-                        // If we are not at the top, add the opposite box in the row above
-                        if ( !top )
-                        {
-                            local_boxes.insert( global_index + 1 );
-                        }
-                        // Add the row below if we are not on the bottom processor
-                        if ( bottom_proc && !bottom )
-                        {
-                            local_boxes.insert( global_index - 2*mNumBoxesEachDirection(0) + 1 );
-                        }
-                    }
-
-                    if ( mIsPeriodicInY && bottom )
-                    {
-                        // Add the box directly above 
-                        unsigned above_box = global_index + (mNumBoxesEachDirection(1)-1)*mNumBoxesEachDirection(0);
-                        local_boxes.insert( above_box );
-                        // Now add the left and right boxes if required, checking for X periodicity as well
-                        if ( !left )
-                        {
-                            local_boxes.insert( above_box - 1 );
-                        }
-                        else if ( mIsPeriodicInX )
-                        {
-                            local_boxes.insert( above_box + mNumBoxesEachDirection(0)-1 );
-                        }
-                        if ( !right )
-                        {
-                            local_boxes.insert( above_box + 1 );
-                        }
-                        else if ( mIsPeriodicInX )
-                        {
-                            local_boxes.insert( above_box - mNumBoxesEachDirection(0) + 1 );
-                        }
-                    }
-
-                    // Only do the top-bottom periodicity if it is a separate processor
-                    if ( mIsPeriodicInY && top && (mMinBoxIndex > 0) )
-                    {
-                        // Add in the below box
-                        unsigned below_box = global_index - (mNumBoxesEachDirection(1)-1)*mNumBoxesEachDirection(0);
-                        local_boxes.insert(below_box);
-                        // Now add in left/right as required, checking for x periodicity
-                        if ( !left )
-                        {
-                            local_boxes.insert(below_box-1);
-                        }
-                        else if ( mIsPeriodicInX )
-                        {
-                            local_boxes.insert(below_box+mNumBoxesEachDirection(0)-1);
-                        }
-                        if ( !right )
-                        {
-                            local_boxes.insert( below_box + 1 );
-                        }
-                        else if ( mIsPeriodicInX )
-                        {
-                            local_boxes.insert( below_box - mNumBoxesEachDirection(0) + 1 );
-                        }
-                    }
-
-                    mLocalBoxes.push_back(local_boxes);
                 }
+                
                 break;
             }
             case 3:
             {
-                // We only need to look for neighbours in the current box and half the neighbouring boxes plus some others for halos
+                // Clear the local boxes
                 mLocalBoxes.clear();
-                unsigned num_boxes_xy = mNumBoxesEachDirection(0)*mNumBoxesEachDirection(1);
 
-                for (unsigned global_index = mMinBoxIndex; global_index<mMaxBoxIndex+1; global_index++)
+                // Now we need to work out the min and max y indices
+                int k_start = CalculateGridIndices(mMinBoxIndex)(2);
+                int k_end = CalculateGridIndices(mMaxBoxIndex)(2);
+                
+                // Determine the number of boxes in each direction
+                int nI = mNumBoxesEachDirection(0);
+                int nJ = mNumBoxesEachDirection(1);
+                int nK = mNumBoxesEachDirection(2);
+
+                // Work out the bottom/top processor
+                int bottom_proc = mpDistributedBoxStackFactory->GetLow();
+                int top_proc = mpDistributedBoxStackFactory->GetHigh();
+                
+                // Outer loop: over z
+                for ( int k = k_start; k <= k_end; k++ )
                 {
-                    std::set<unsigned> local_boxes;
-
-                    // Set some bools to find out where we are
-                    bool top = !(global_index % num_boxes_xy < num_boxes_xy - mNumBoxesEachDirection(0));
-                    bool bottom = (global_index % num_boxes_xy < mNumBoxesEachDirection(0));
-                    bool left = (global_index % mNumBoxesEachDirection(0) == 0);
-                    bool right = (global_index % mNumBoxesEachDirection(0) == mNumBoxesEachDirection(0) - 1);
-                    bool front = (global_index < num_boxes_xy);
-                    bool back = !(global_index < num_boxes_xy*mNumBoxesEachDirection(2) - num_boxes_xy);
-                    bool proc_front = (CalculateGridIndices(global_index)[2] == mpDistributedBoxStackFactory->GetLow());
-                    bool proc_back = (CalculateGridIndices(global_index)[2] == mpDistributedBoxStackFactory->GetHigh()-1);
-
-                    // Insert the current box
-                    local_boxes.insert(global_index);
-
-                    // If we're not on the front face, add appropriate boxes on the closer face
-                    if(!front)
+                    // Middle loop: over y
+                    for ( int j = 0; j < nJ; j++ )
                     {
-                        // If we're not on the top of the domain
-                        if(!top)
+                        // Inner loop: over x
+                        for ( int i = 0; i < nI; i++ )
                         {
-                            local_boxes.insert( global_index - num_boxes_xy + mNumBoxesEachDirection(0) );
-                            if(!left)
+                            std::set<unsigned> local_boxes;
+                            
+                            // Same z level
+                            int z_offset = k*nI*nJ;
+                            // (See case dim=2 for commented code of X-Y implementation)
+                            int j_mod = j;
+                            for ( int dj = 0; dj < std::min(nJ-j_mod,2); dj++ )
                             {
-                                local_boxes.insert( global_index - num_boxes_xy + mNumBoxesEachDirection(0) - 1);
-                            }
-                            if(!right)
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy + mNumBoxesEachDirection(0) + 1);
-                            }
-                        }
-                        if(!right)
-                        {
-                            local_boxes.insert( global_index - num_boxes_xy + 1);
-                        }
-
-                        // If we are on the front of the process we have to add extra boxes as they are halos.
-                        if(proc_front)
-                        {
-                            local_boxes.insert( global_index - num_boxes_xy );
-
-                            if(!left)
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy - 1);
-                            }
-                            if(!bottom)
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy - mNumBoxesEachDirection(0));
-
-                                if(!left)
+                                for ( int boxi = std::max((int)i-1*dj,0); 
+                                            boxi < std::min((int)i+2,nI); boxi++ )
                                 {
-                                    local_boxes.insert( global_index - num_boxes_xy - mNumBoxesEachDirection(0) - 1);
+                                    local_boxes.insert( z_offset + (j_mod+dj)*nI + boxi );
                                 }
-                                if(!right)
+                                if ( i==(nI-1) && mIsPeriodicInX )
                                 {
-                                    local_boxes.insert( global_index - num_boxes_xy - mNumBoxesEachDirection(0) + 1);
+                                    local_boxes.insert( z_offset + (j_mod+dj)*nI );
+                                }
+                                if ( mIsPeriodicInY && j == (nJ-1) )
+                                {
+                                    j_mod = -1;
                                 }
                             }
-
-                        }
-                    }
-                    if(!right)
-                    {
-                        local_boxes.insert( global_index + 1);
-                    }
-                    // If we're not on the very top add boxes above
-                    if(!top)
-                    {
-                        local_boxes.insert( global_index + mNumBoxesEachDirection(0));
-
-                        if(!right)
-                        {
-                            local_boxes.insert( global_index + mNumBoxesEachDirection(0) + 1);
-                        }
-                        if(!left)
-                        {
-                            local_boxes.insert( global_index + mNumBoxesEachDirection(0) - 1);
-                        }
-                    }
-
-                    // If we're not on the back add boxes behind
-                    if(!back)
-                    {
-                        local_boxes.insert(global_index + num_boxes_xy);
-
-                        if(!right)
-                        {
-                            local_boxes.insert(global_index + num_boxes_xy + 1);
-                        }
-                        if(!top)
-                        {
-                            local_boxes.insert(global_index + num_boxes_xy + mNumBoxesEachDirection(0));
-                            if(!right)
+                            // Now add the left-upper box if x periodic and on the boundary
+                            if ( mIsPeriodicInX && i == 0 )
                             {
-                                local_boxes.insert(global_index + num_boxes_xy + mNumBoxesEachDirection(0) + 1);
-                            }
-                            if(!left)
-                            {
-                                local_boxes.insert(global_index + num_boxes_xy + mNumBoxesEachDirection(0) - 1);
-                            }
-                        }
-                        // If we are on the back proc we should make sure we get everything in the face further back
-                        if(proc_back)
-                        {
-                            if(!left)
-                            {
-                                local_boxes.insert(global_index + num_boxes_xy - 1);
-                            }
-                            if(!bottom)
-                            {
-                                local_boxes.insert(global_index + num_boxes_xy - mNumBoxesEachDirection(0));
-
-                                if(!left)
+                                if ( j < (nJ-1) )
                                 {
-                                    local_boxes.insert(global_index + num_boxes_xy - mNumBoxesEachDirection(0) - 1);
-                                }
-                                if(!right)
-                                {
-                                    local_boxes.insert(global_index + num_boxes_xy - mNumBoxesEachDirection(0) + 1);
-                                }
-                            }
-                        }
-                    }
-
-                    // Now add the periodic boxes if any periodicity
-                    if ( mIsPeriodicInX && (right || left) )
-                    {
-                        unsigned M = mNumBoxesEachDirection(0);
-                        // First add values in the current z box level
-                        if ( right )
-                        {
-                            local_boxes.insert( global_index - M + 1 );
-                            if ( !top )
-                            {
-                                local_boxes.insert( global_index + 1 );
-                            }
-                        }
-                        else if (left && !top)
-                        {
-                            local_boxes.insert( global_index + (2*M-1) );
-                        }
-                        // Now add boxes in the higher z box level
-                        if ( !back )
-                        {
-                            if ( right )
-                            {
-                                local_boxes.insert( global_index + num_boxes_xy - M + 1 );
-                                if ( !top )
-                                {
-                                    local_boxes.insert( global_index + num_boxes_xy + 1 );
-                                }
-                            }
-                            else if (left && !top)
-                            {
-                                local_boxes.insert( global_index + num_boxes_xy + (2*M-1) );
-                            }
-                        }
-                        // Then boxes in the lower z level
-                        if ( !front )
-                        {
-                            if ( right )
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy - M + 1 );
-                                if ( !top )
-                                {
-                                    local_boxes.insert( global_index - num_boxes_xy + 1 );
-                                }
-                            }
-                            else if (left && !top)
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy + (2*M-1) );
-                            }
-                        }
-
-                        // Also need to consider if we are at the bottom or top of a processor
-                        if ( proc_front && !front )
-                        {
-                            // Add the rest of the periodic boxes in the lower z level
-                            if ( left )
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy + M - 1 );
-                                if ( !bottom )
-                                {
-                                    local_boxes.insert( global_index - num_boxes_xy - 1 );
-                                }
-                            }
-                            if ( right && !bottom )
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy - 2*M + 1 );
-                            }
-                        }
-                        if ( proc_back && !back )
-                        {
-                            // Add the rest of the boxes in the upper z level
-                            if ( left )
-                            {
-                                local_boxes.insert( global_index + num_boxes_xy + M - 1 );
-                                if ( !bottom )
-                                {
-                                    local_boxes.insert( global_index + num_boxes_xy - 1 );
-                                }
-                            }
-                            if ( right && !bottom )
-                            {
-                                local_boxes.insert( global_index + num_boxes_xy - 2*M + 1 );
-                            }
-                        }
-
-                    }
-
-                    if ( mIsPeriodicInY && (top || bottom) )
-                    {
-                        unsigned M = mNumBoxesEachDirection(0);
-                        unsigned N = mNumBoxesEachDirection(1);
-                        // We need to add the bottom row to the top row
-                        if ( top )
-                        {
-                            // The current z level
-                            local_boxes.insert( global_index - (N-1)*M );
-                            if ( !left )
-                            {
-                                local_boxes.insert( global_index - (N-1)*M -1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index - (N-1)*M + M - 1 );
-                            }
-                            if ( !right )
-                            {
-                                local_boxes.insert( global_index - (N-1)*M + 1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index - (N-1)*M - M + 1 );
-                            }
-
-                            // The lower z level
-                            if ( !front )
-                            {
-                                local_boxes.insert( global_index - num_boxes_xy - (N-1)*M );
-                                if ( !left )
-                                {
-                                    local_boxes.insert( global_index - num_boxes_xy - (N-1)*M -1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index - num_boxes_xy - (N-1)*M + M - 1 );
-                                }
-                                if ( !right )
-                                {
-                                    local_boxes.insert( global_index - num_boxes_xy - (N-1)*M + 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index - num_boxes_xy - (N-1)*M - M + 1 );
-                                }
-                            }
-
-                            // The upper z level
-                            if ( !back )
-                            {
-                                local_boxes.insert( global_index + num_boxes_xy - (N-1)*M );
-                                if ( !left )
-                                {
-                                    local_boxes.insert( global_index + num_boxes_xy - (N-1)*M -1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index + num_boxes_xy - (N-1)*M + M - 1 );
-                                }
-                                if ( !right )
-                                {
-                                    local_boxes.insert( global_index + num_boxes_xy - (N-1)*M + 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index + num_boxes_xy - (N-1)*M - M + 1 );
-                                }
-                            }
-                        }
-
-                        // We also need to consider if on different processors
-                        if ( proc_front && !front && bottom )
-                        {
-                            local_boxes.insert( global_index - M );
-                            if ( !left )
-                            {
-                                local_boxes.insert( global_index - M - 1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index - 1 );
-                            }
-                            if ( !right )
-                            {
-                                local_boxes.insert( global_index - M + 1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index - 2*M + 1 );
-                            }
-                        }
-                        if ( proc_back && !back && bottom )
-                        {
-                            local_boxes.insert( global_index + 2*num_boxes_xy - M );
-                            if ( !left )
-                            {
-                                local_boxes.insert( global_index + 2*num_boxes_xy - M - 1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index + 2*num_boxes_xy - 1 );
-                            }
-                            if ( !right )
-                            {
-                                local_boxes.insert( global_index + 2*num_boxes_xy - M + 1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index + 2*num_boxes_xy - 2*M + 1 );
-                            }
-                        }
-                    }
-
-                    // Periodicity in Z direction
-                    if (mIsPeriodicInZ && (front || back))
-                    {
-                        unsigned M = mNumBoxesEachDirection(0);
-                        unsigned N = mNumBoxesEachDirection(1);
-                        unsigned P = mNumBoxesEachDirection(2);
-                        if ( front )
-                        {
-                            // We need to add the row above and box 
-                            // to the right in the top level
-                            if (!right)
-                            {
-                                local_boxes.insert( global_index + (P-1)*M*N + 1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index + (P-1)*M*N - M + 1 );
-                            }
-                            if ( !top )
-                            {
-                                local_boxes.insert( global_index + (P-1)*M*N + M );
-                                if ( !left )
-                                {
-                                    local_boxes.insert( global_index + (P-1)*M*N + M - 1);
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index + (P-1)*M*N + 2*M - 1 );
-                                }
-                                if ( !right )
-                                {
-                                    local_boxes.insert( global_index + (P-1)*M*N + M + 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index + (P-1)*M*N + 1 );
-                                }
-                            }
-                            else if ( mIsPeriodicInY )
-                            {
-                                // We need to add the boxes in the lowest y value of the top level
-                                local_boxes.insert( global_index + (P-2)*M*N + M );
-                                if ( !left )
-                                {
-                                    local_boxes.insert( global_index + (P-2)*M*N + M - 1);
-                                }
-                                if ( !right )
-                                {
-                                    local_boxes.insert( global_index + (P-2)*M*N + M + 1);
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index + (P-2)*M*N + 1);
-                                }
-                            }
-
-                            // We need to add everything else as well if it is
-                            // on a different processor to the top level
-                            if ( mMaxBoxIndex < (num_boxes_xy*mNumBoxesEachDirection(2)-1) )
-                            {
-                                // Add the row below and the box directly above and to the left
-                                local_boxes.insert(global_index + (P-1)*M*N);
-                                if ( !left )
-                                {
-                                    local_boxes.insert(global_index + (P-1)*M*N - 1);
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert(global_index + (P-1)*M*N + M - 1);
-                                }
-                                if ( !bottom )
-                                {
-                                    local_boxes.insert(global_index + (P-1)*M*N - M );
-                                    if ( !left )
+                                    local_boxes.insert( z_offset + (j+2)*nI - 1 );
+                                    if ( j==0 && mIsPeriodicInY && top_proc < nJ )
                                     {
-                                        local_boxes.insert(global_index + (P-1)*M*N - M - 1);
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert(global_index + (P-1)*M*N - 1);
-                                    }
-                                    if ( !right )
-                                    {
-                                        local_boxes.insert(global_index + (P-1)*M*N - M + 1);
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert(global_index + (P-1)*M*N - 2*M + 1); 
+                                        local_boxes.insert( z_offset + nI*nJ - 1 );
                                     }
                                 }
                                 else if ( mIsPeriodicInY )
                                 {
-                                    // Add the top row of the upper box
-                                    local_boxes.insert( global_index + P*M*N - M );
-                                    if ( !left )
-                                    {
-                                        local_boxes.insert( global_index + P*M*N - M - 1 );
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert( global_index + P*M*N - 1 );
-                                    }
-                                    if ( !right )
-                                    {
-                                        local_boxes.insert( global_index + P*M*N - M + 1 );
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert( global_index + P*M*N - 2*M + 1 );
-                                    }
-                                }
-
-                            }
-                        }
-                           
-                        if ( back )
-                        {   
-                            // We need to add the row above and the box below and 
-                            // to the right in the bottom level
-                            local_boxes.insert( global_index - (P-1)*M*N );
-                            if ( !right )
-                            {
-                                local_boxes.insert( global_index - (P-1)*M*N + 1 );
-                            }
-                            else if ( mIsPeriodicInX )
-                            {
-                                local_boxes.insert( global_index - (P-1)*M*N - M + 1 );
-                            }
-                            if ( !top )
-                            {
-                                local_boxes.insert( global_index - (P-1)*M*N + M );
-                                if ( !left )
-                                {
-                                    local_boxes.insert( global_index - (P-1)*M*N + M - 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index - (P-1)*M*N + 2*M - 1 );
-                                }
-                                if ( !right )
-                                {
-                                    local_boxes.insert( global_index - (P-1)*M*N + M + 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index - (P-1)*M*N + 1 );
-                                }
-                            }
-                            else if ( mIsPeriodicInY )
-                            {
-                                // Need to add the bottom row
-                                local_boxes.insert( global_index - P*M*N + M );
-                                if ( !left )
-                                {
-                                    local_boxes.insert( global_index - P*M*N + M - 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index - P*M*N + 2*M - 1 );
-                                }
-                                if ( !right )
-                                {
-                                    local_boxes.insert( global_index - P*M*N + M + 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index - P*M*N + 1 );
+                                    local_boxes.insert( z_offset + nI-1 );
                                 }
                             }
 
-                            // If the front is not on the same processor need to add the other boxes at the base
-                            if ( 0 < mMinBoxIndex )
+                            // Add all the surrounding boxes from the z level above if required
+                            std::vector<unsigned> k_offset;
+                            if ( k < (nK-1) )
                             {
-                                if ( !left )
+                                k_offset.push_back(k+1);
+                            }
+                            if ( k == bottom_proc && k > 0 )
+                            {
+                                // Need the level below if we are on the lowest processor
+                                k_offset.push_back(k-1);
+                            }
+                            if ( mIsPeriodicInZ && k == (nK-1) )
+                            {
+                                k_offset.push_back(0);
+                            }
+                            else if ( mIsPeriodicInZ && k==0 && (top_proc < nK) )
+                            {
+                                k_offset.push_back(nK-1);
+                            }
+                            
+                            for ( std::vector<unsigned>::iterator k_offset_it = k_offset.begin(); k_offset_it != k_offset.end(); ++k_offset_it )
+                            {
+                                z_offset = (*k_offset_it)*nI*nJ;
+                                // Periodicity adjustments
+                                int pX = (int) mIsPeriodicInX;
+                                int pY = (int) mIsPeriodicInY;
+                                for ( int boxi = std::max((int)i-1,-1*pX); boxi < std::min((int)i+2,nI+pX); boxi++ )
                                 {
-                                    local_boxes.insert( global_index - (P-1)*M*N - 1 );
-                                }
-                                else if ( mIsPeriodicInX )
-                                {
-                                    local_boxes.insert( global_index - (P-1)*M*N + M - 1 );
-                                }
-                                if ( !bottom )
-                                {
-                                    local_boxes.insert( global_index - (P-1)*M*N - M );
-                                    if ( !left )
+                                    for ( int boxj = std::max((int)j-1,-1*pY); boxj < std::min((int)j+2,nJ+pY); boxj++ )
                                     {
-                                        local_boxes.insert( global_index - (P-1)*M*N - M - 1 );
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert( global_index - (P-1)*M*N - 1 );
-                                    }
-                                    if ( !right )
-                                    {
-                                        local_boxes.insert( global_index - (P-1)*M*N - M + 1 );
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert( global_index - (P-1)*M*N - 2*M + 1 );
-                                    }
-                                }
-                                else if ( mIsPeriodicInY )
-                                {
-                                    // Need to add the bottom row
-                                    local_boxes.insert( global_index - (P-2)*M*N + M );
-                                    if ( !left )
-                                    {
-                                        local_boxes.insert( global_index - (P-2)*M*N + M - 1 );
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert( global_index - (P-2)*M*N + 2*M - 1 );
-                                    }
-                                    if ( !right )
-                                    {
-                                        local_boxes.insert( global_index - (P-2)*M*N + M + 1 );
-                                    }
-                                    else if ( mIsPeriodicInX )
-                                    {
-                                        local_boxes.insert( global_index - (P-2)*M*N + 1 );
+                                        int box_to_add = z_offset + (boxj*nI) + boxi;
+                                        // Check for x periodicity
+                                        // i==(nI-1) only when we are periodic and on the right, 
+                                        // i==-1 only when we are periodic and on the left
+                                        box_to_add += ( (unsigned)(boxi==-1) - (unsigned)(boxi==nI) )*nI;
+                                        // Check for y periodicity
+                                        // j==nJ only when we are periodic and on the right, 
+                                        // j==-1 only when we are periodic and on the left
+                                        box_to_add += ( (unsigned)(boxj==-1) - (unsigned)(boxj==nJ) )*nI*nJ;
+                                        local_boxes.insert( box_to_add );
                                     }
                                 }
                             }
+
+                            
+                            
+                            // Add to the local boxes
+                            mLocalBoxes.push_back(local_boxes);
                         }
                     }
-
-                    mLocalBoxes.push_back(local_boxes);
                 }
-
                 break;
             }
             default:
