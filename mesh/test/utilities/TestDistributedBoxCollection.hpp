@@ -583,9 +583,20 @@ public:
             TS_ASSERT_EQUALS(local_boxes_to_box_0, correct_answer_0);
 
             // Periodic answers
+            std::set<unsigned> correct_answer_0_x = correct_answer_0;
+            correct_answer_0_x.insert(7);
+            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(0), correct_answer_0_x);
+            if ( PetscTools::GetNumProcs() > 1 )
+            {
+                correct_answer_0.insert(8);
+                correct_answer_0.insert(9);
+            }
             TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(0), correct_answer_0);
             correct_answer_0.insert(7);
-            TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(0), correct_answer_0);
+            if ( PetscTools::GetNumProcs() > 1 )
+            {
+                correct_answer_0.insert(11);
+            }
             TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(0), correct_answer_0);
         }
         if (box_collection.IsBoxOwned(3))
@@ -598,10 +609,22 @@ public:
             TS_ASSERT_EQUALS(local_boxes_to_box_3, correct_answer_3);
 
             // Periodic answers
-            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(3), correct_answer_3);
+            std::set<unsigned> correct_answer_3_y = correct_answer_3;
+            if ( PetscTools::GetNumProcs() > 1 )
+            {
+                correct_answer_3_y.insert(10);
+                correct_answer_3_y.insert(11);
+            }
+            TS_ASSERT_EQUALS(box_collection_pdc_Y.rGetLocalBoxes(3), correct_answer_3_y);
             correct_answer_3.insert(0);
             correct_answer_3.insert(4);
             TS_ASSERT_EQUALS(box_collection_pdc_X.rGetLocalBoxes(3), correct_answer_3);
+            if ( PetscTools::GetNumProcs() > 1 )
+            {
+                correct_answer_3.insert(8);
+                correct_answer_3.insert(10);
+                correct_answer_3.insert(11);
+            }
             TS_ASSERT_EQUALS(box_collection_pdc_XY.rGetLocalBoxes(3), correct_answer_3);
         }
         if (box_collection.IsBoxOwned(5))
@@ -613,6 +636,12 @@ public:
             correct_answer_5.insert(8);
             correct_answer_5.insert(9);
             correct_answer_5.insert(10);
+            if ( PetscTools::GetMyRank() > 0 )
+            {
+                correct_answer_5.insert(0);
+                correct_answer_5.insert(1);
+                correct_answer_5.insert(2);
+            }
             TS_ASSERT_EQUALS(local_boxes_to_box_5, correct_answer_5);
 
             // Periodic answers should be the same
@@ -626,6 +655,12 @@ public:
             std::set<unsigned> correct_answer_10;
             correct_answer_10.insert(10);
             correct_answer_10.insert(11);
+            if ( PetscTools::GetMyRank() > 0 )
+            {
+                correct_answer_10.insert(5);
+                correct_answer_10.insert(6);
+                correct_answer_10.insert(7);
+            }
             if (PetscTools::GetNumProcs() > 3u)
             {
                 // There's a process (spinning) which requires an extra halo slice (12, 13, 14, 15)
@@ -1060,43 +1095,51 @@ public:
                 node_a_location(0) = (0.25 + 0.5 * double(pos_x)) * box_size;
                 node_a_location(1) = (0.25 + 0.5 * double(pos_y)) * box_size;
 
-                for (unsigned offset = 0 ; offset < num_offsets_to_test ; offset++)
+                // Check it is owned by the processor
+                if (box_collection.IsBoxOwned( box_collection.CalculateContainingBox(node_a_location) ))
                 {
-                    // Offset a second position within the interaction distance
-                    c_vector<double, 2> node_b_location = node_a_location + (box_size - delta) * offsets_to_test[offset];
+                    for (unsigned offset = 0 ; offset < num_offsets_to_test ; offset++)
+                    {
+                        // Offset a second position within the interaction distance
+                        c_vector<double, 2> node_b_location = node_a_location + (box_size - delta) * offsets_to_test[offset];
 
-                    // Account for periodicity
-                    node_b_location[0] = fmod(node_b_location[0] + 1.0, 1.0);
-                    node_b_location[1] = fmod(node_b_location[1] + 1.0, 1.0);
+                        // Account for periodicity
+                        node_b_location[0] = fmod(node_b_location[0] + 1.0, 1.0);
+                        node_b_location[1] = fmod(node_b_location[1] + 1.0, 1.0);
 
-                    // Create nodes
-                    std::vector<Node<2>* > nodes;
-                    nodes.push_back(new Node<2>(0, node_a_location, false));
-                    nodes.push_back(new Node<2>(1, node_b_location, false));
+                        // Create nodes
+                        std::vector<Node<2>* > nodes;
+                        nodes.push_back(new Node<2>(0, node_a_location, false));
+                        nodes.push_back(new Node<2>(1, node_b_location, false));
 
-                    // Get associated boxes
-                    std::vector< Box<2>* > boxes;
-                    boxes.push_back(&box_collection.rGetBox(box_collection.CalculateContainingBox(node_a_location)));
-                    boxes.push_back(&box_collection.rGetBox(box_collection.CalculateContainingBox(node_b_location)));
-                    
-                    // Add nodes to boxes
-                    boxes[0]->AddNode(nodes[0]);
-                    boxes[1]->AddNode(nodes[1]);
-                    
-                    //printf("Node a is at (%f,%f), node b is at (%f,%f), there are %i process(es).\n",node_a_location(0),node_a_location(1),node_b_location(0),node_b_location(1),PetscTools::GetNumProcs());
+                        // Get associated boxes
+                        std::vector< Box<2>* > boxes;
+                        boxes.push_back(&box_collection.rGetBox(box_collection.CalculateContainingBox(node_a_location)));
+                        boxes.push_back(&box_collection.rGetBox(box_collection.CalculateContainingBox(node_b_location)));
+                        
+                        // Add nodes to boxes
+                        boxes[0]->AddNode(nodes[0]);
+                        boxes[1]->AddNode(nodes[1]);
+                        
+                        std::vector< std::pair<Node<2>*, Node<2>* > > pairs_returned_vector;
 
-                    std::vector< std::pair<Node<2>*, Node<2>* > > pairs_returned_vector;
+                        box_collection.CalculateNodePairs(nodes, pairs_returned_vector);
+                        if ( pairs_returned_vector.size() != 1 )
+                        {
+                            printf("For node locations (%f,%f) and (%f,%f) on process %i, no pair found. Will be in boxes %i and %i\n",
+                                        node_a_location[0],node_a_location[1],node_b_location[0],node_b_location[1], (int)PetscTools::GetMyRank(), 
+                                        box_collection.CalculateContainingBox(node_a_location), box_collection.CalculateContainingBox(node_b_location));
+                        }
+                        TS_ASSERT(pairs_returned_vector.size() == 1);
 
-                    box_collection.CalculateNodePairs(nodes, pairs_returned_vector);
-                    TS_ASSERT(pairs_returned_vector.size() == 1);
+                        // Remove nodes from box
+                        boxes[0]->RemoveNode(nodes[0]);
+                        boxes[1]->RemoveNode(nodes[1]);
 
-                    // Remove nodes from box
-                    boxes[0]->RemoveNode(nodes[0]);
-                    boxes[1]->RemoveNode(nodes[1]);
-
-                    // clean up memory
-                    delete nodes[0];
-                    delete nodes[1];
+                        // clean up memory
+                        delete nodes[0];
+                        delete nodes[1];
+                    }
                 }
             }
         }
@@ -2357,7 +2400,6 @@ public:
         }
     }
 
-
     void TestBoxGeneration3d() throw (Exception)
     {
         // Create a mesh
@@ -2449,6 +2491,7 @@ public:
                     correct_answer_34.insert(23);
                     correct_answer_34.insert(24);
                     correct_answer_34.insert(25);
+                    correct_answer_34.insert(26);
                 }
                 TS_ASSERT_EQUALS(local_boxes_to_box_34, correct_answer_34);
             }

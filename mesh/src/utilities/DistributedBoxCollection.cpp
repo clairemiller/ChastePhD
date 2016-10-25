@@ -144,6 +144,19 @@ void DistributedBoxCollection<DIM>::SetupHaloBoxes()
             mHalosRight.push_back(global_index - mNumBoxesInAFace);
         }
     }
+    // Otherwise if I am the top most and periodic in y (2d) or z (3d) add halo boxes for 
+    // the base process
+    else if ( (mIsPeriodicInY && DIM == 2) || (mIsPeriodicInZ && DIM==3) )
+    {
+        for (unsigned i=0; i < mNumBoxesInAFace; i++)
+        {
+            Box<DIM> new_box;
+            mHaloBoxes.push_back(new_box);
+
+            mHaloBoxesMapping[i] = mHaloBoxes.size()-1;
+            mHalosRight.push_back( (hi-1)*mNumBoxesInAFace + i );
+        }
+    }
 
     // If I am not the bottom-most process, add halo structures below.
     if (!PetscTools::AmMaster())
@@ -158,6 +171,21 @@ void DistributedBoxCollection<DIM>::SetupHaloBoxes()
 
             mHalosLeft.push_back(global_index  + mNumBoxesInAFace);
         }
+    }
+    // Otherwise if I am the bottom most and periodic in y (2d) or z (3d) add halo boxes for 
+    // the top process
+    else if ( (mIsPeriodicInY && DIM == 2) || (mIsPeriodicInZ && DIM==3) )
+    {
+        for (unsigned i=0; i < mNumBoxesInAFace; i++)
+        {
+            Box<DIM> new_box;
+            mHaloBoxes.push_back(new_box);
+
+            unsigned global_index = (mNumBoxesEachDirection(DIM-1) - 1) * mNumBoxesInAFace + i;
+            mHaloBoxesMapping[global_index] = mHaloBoxes.size()-1;
+            mHalosLeft.push_back( i );
+        }
+
     }
 }
 
@@ -205,6 +233,19 @@ bool DistributedBoxCollection<DIM>::IsHaloBox(unsigned globalIndex)
 {
     bool is_halo_right = ((globalIndex > mMaxBoxIndex) && !(globalIndex > mMaxBoxIndex + mNumBoxesInAFace));
     bool is_halo_left = ((globalIndex < mMinBoxIndex) && !(globalIndex < mMinBoxIndex - mNumBoxesInAFace));
+
+    // Also need to check for periodic boxes
+    if ( ( mIsPeriodicInY && DIM==2 ) || (mIsPeriodicInZ && DIM==3) )
+    {
+        if ( PetscTools::AmTopMost() )
+        {
+            is_halo_right = (globalIndex < mNumBoxesInAFace);
+        }
+        if ( PetscTools::AmMaster() )
+        {
+            is_halo_left = (!(globalIndex < (mNumBoxesEachDirection[DIM-1]-1)*mNumBoxesInAFace) && (globalIndex < mNumBoxesEachDirection[DIM-1]*mNumBoxesInAFace ));
+        }
+    }
 
     return (PetscTools::IsParallel() && (is_halo_right || is_halo_left));
 }
@@ -297,13 +338,7 @@ unsigned DistributedBoxCollection<DIM>::CalculateContainingBox(c_vector<double, 
     }
 
     // This index must be less than the total number of boxes
-    if (containing_box_index >= mNumBoxes)
-    {
-        assert(containing_box_index < mNumBoxes);
-    }
-    
-
-    //printf("Completed containing box.\n");
+    assert(containing_box_index < mNumBoxes);    
 
     return containing_box_index;
 }
@@ -597,41 +632,36 @@ void DistributedBoxCollection<DIM>::SetupLocalBoxesHalfOnly()
                                     (i,j)   (i+1,j)   */
                         
                         int j_mod = j; // This is used to account for y periodic boundaries
+                        // If we are on the bottom of the processor, we may need to add the row below
+                        int dj = -1 * (int)(j == bottom_proc && (j > 0 || (mIsPeriodicInY && top_proc < nJ)) );
+                        int j_mod_2 = 0;
                         // The min ensures we don't go above the top boundary
-                        for ( int dj = 0; dj < std::min((int)nJ-j_mod,(int)2); dj++ )
+                        for (; dj < std::min((int)nJ-j_mod,(int)2); dj++ )
                         {
+                            // We need to change to the top row if we are in the condition where dj == -1 and j == 0 which is only
+                            // when we are periodic in y and the top row is on a different processor to the bottom row
+                            if ( mIsPeriodicInY && j == 0 && dj < 1 && top_proc < nJ )
+                            {
+                                j_mod_2 = ( dj < 0 ) ? nJ : 0;
+                            }
+
                             // The -1*dj ensures we get the upper left, the max ensures we don't hit the left boundary, 
                             // the min ensures we don't hit the right boundary
-                            for ( int boxi = std::max((int)i-1*dj,(int)0); boxi < std::min((int)i+2,(int)nI); boxi++ )
+                            int boxi = std::max((int) i-1*std::abs(dj),(int) 0);
+                            for ( ; boxi < std::min((int)i+2,(int)nI); boxi++ )
                             {
-                                local_boxes.insert( (j_mod+dj)*nI + boxi );
+                                local_boxes.insert( (j_mod+dj+j_mod_2)*nI + boxi );
                             }
                             // Add in the x periodicity at the right boundary, we then want: (0,j) and (0,j+1)
                             if ( i==(nI-1) && mIsPeriodicInX )
                             {
-                                local_boxes.insert( (j_mod+dj)*nI );
+                                local_boxes.insert( (j_mod+dj+j_mod_2)*nI );
                             }
                             // If the y boundary is periodic, the new j level is the bottom row; we use jmod to adjust 
                             // for this to adjust for dj = 1
-                            if ( mIsPeriodicInY && j == (nJ-1) )
+                            if ( mIsPeriodicInY && j == (nJ-1) && dj == 0 )
                             {
                                 j_mod = -1;
-                            }
-                            // If we are on the bottom of the processor, we may need to add the row below
-                            if ( dj == 1 && j == bottom_proc )
-                            {
-                                if ( j==0 && mIsPeriodicInY && top_proc < nJ )
-                                {
-                                    // We are at the bottom of the domain and the top row is on a different process
-                                    j_mod = nJ-2;
-                                    dj = 0;
-                                }
-                                else if ( j > 0 )
-                                {
-                                    // If we at the bottom of a process but not the domain
-                                    j_mod = j-2;
-                                    dj = 0;
-                                }
                             }
                         }
                         // Now add the left-upper box if x periodic and on the boundary
@@ -648,6 +678,12 @@ void DistributedBoxCollection<DIM>::SetupLocalBoxesHalfOnly()
                             else if ( mIsPeriodicInY )
                             {
                                 local_boxes.insert( nI-1 );
+                            }
+                            // If wee are on the bottom of the process need to add
+                            // the box on the right in the row below
+                            if ( j == bottom_proc && j > 0 )
+                            {
+                                local_boxes.insert( j*nI - 1 );
                             }
                         }
 
