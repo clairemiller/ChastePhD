@@ -146,6 +146,7 @@ void NodeBasedCellPopulation<DIM>::SetNode(unsigned nodeIndex, ChastePoint<DIM>&
 template<unsigned DIM>
 void NodeBasedCellPopulation<DIM>::Update(bool hasHadBirthsOrDeaths)
 {
+
     UpdateCellProcessLocation();
 
     mpNodesOnlyMesh->UpdateBoxCollection();
@@ -157,7 +158,6 @@ void NodeBasedCellPopulation<DIM>::Update(bool hasHadBirthsOrDeaths)
             mpNodesOnlyMesh->LoadBalanceMesh();
 
             UpdateCellProcessLocation();
-
             mpNodesOnlyMesh->UpdateBoxCollection();
         }
     }
@@ -768,16 +768,34 @@ void NodeBasedCellPopulation<DIM>::SendCellsToNeighbourProcesses()
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_right(&mCellsToSendRight, null_deleter());
         mpCellsRecvRight = mRightCommunicator.SendRecvObject(p_cells_right, PetscTools::GetMyRank() + 1, mCellCommunicationTag, PetscTools::GetMyRank() + 1, mCellCommunicationTag, status);
     }
+    
     if (!PetscTools::AmMaster())
     {
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_left(&mCellsToSendLeft, null_deleter());
         mpCellsRecvLeft = mLeftCommunicator.SendRecvObject(p_cells_left, PetscTools::GetMyRank() - 1, mCellCommunicationTag, PetscTools::GetMyRank() - 1, mCellCommunicationTag, status);
+    }
+    else if ( mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection()  )
+    {
+        boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_left(&mCellsToSendLeft, null_deleter());
+        mpCellsRecvLeft = mLeftCommunicator.SendRecvObject(p_cells_left, PetscTools::GetNumProcs() - 1, mCellCommunicationTag, PetscTools::GetNumProcs() - 1, mCellCommunicationTag, status);
+    }
+    
+    // We need to leave this to the end (rather than as an else if for AmTopMost()) 
+    // otherwise there will be a cyclic send-receive and it will stall
+    if ( PetscTools::AmTopMost() && mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
+    {
+        boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_right(&mCellsToSendRight, null_deleter());
+        mpCellsRecvRight = mRightCommunicator.SendRecvObject(p_cells_right, 0, mCellCommunicationTag, 0, mCellCommunicationTag, status);
     }
 }
 
 template<unsigned DIM>
 void NodeBasedCellPopulation<DIM>::NonBlockingSendCellsToNeighbourProcesses()
 {
+
+    // Not written for periodicity across processors
+    assert( !mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection()  );
+
     if (!PetscTools::AmTopMost())
     {
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_right(&mCellsToSendRight, null_deleter());
@@ -813,6 +831,15 @@ void NodeBasedCellPopulation<DIM>::GetReceivedCells()
     if (!PetscTools::AmMaster())
     {
         mpCellsRecvLeft = mLeftCommunicator.GetRecvObject();
+    }
+    // Periodicity across processors
+    else if ( mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
+    {
+        mpCellsRecvLeft = mLeftCommunicator.GetRecvObject();
+    }
+    if ( PetscTools::AmTopMost() && mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
+    {
+        mpCellsRecvRight = mRightCommunicator.GetRecvObject();
     }
 }
 

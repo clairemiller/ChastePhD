@@ -275,35 +275,34 @@ boost::shared_ptr<CLASS> ObjectCommunicator<CLASS>::GetRecvObject()
 template<typename CLASS>
 boost::shared_ptr<CLASS> ObjectCommunicator<CLASS>::SendRecvObject(boost::shared_ptr<CLASS> const pSendObject, unsigned destinationProcess, unsigned sendTag, unsigned sourceProcess, unsigned sourceTag, MPI_Status& status)
 {
-    // Create an output archive
+   // Create an output archive
     std::ostringstream oss(std::ios::binary);
     boost::archive::binary_oarchive output_arch(oss);
 
     output_arch << pSendObject;
 
     std::string send_msg = oss.str();
-
+    
     // Get + send string length
     unsigned send_string_length = send_msg.size();
     unsigned recv_string_length;
 
     MPI_Sendrecv(&send_string_length, 1, MPI_UNSIGNED, destinationProcess, sendTag, &recv_string_length, 1, MPI_UNSIGNED, sourceProcess, sourceTag, PetscTools::GetWorld(), &status);
-
+    
     boost::scoped_array<char> recv_array(new char[recv_string_length]);
 
     // Send archive data
     char* send_buf = const_cast<char*>(send_msg.data());
     MPI_Sendrecv(send_buf, send_string_length, MPI_BYTE, destinationProcess, sendTag, recv_array.get(), recv_string_length, MPI_BYTE, sourceProcess, sourceTag, PetscTools::GetWorld(), &status);
-
     // Extract received object
     std::string recv_string(recv_array.get(), recv_string_length);
     std::istringstream iss(recv_string, std::ios::binary);
-
+    
     boost::shared_ptr<CLASS> p_recv_object(new CLASS);
     boost::archive::binary_iarchive input_arch(iss);
 
     input_arch >> p_recv_object;
-
+    
     return p_recv_object;
 }
 

@@ -333,6 +333,11 @@ public:
     void ResizeBoxCollection();
 
     /**
+     * Gets the periodicity across processors information from mpBoxCollection
+    */
+    bool GetIsPeriodicAcrossProcsFromBoxCollection() const;
+
+    /**
      * Iterate through each node and add it to its appropriate box.
      */
     void AddNodesToBoxes();

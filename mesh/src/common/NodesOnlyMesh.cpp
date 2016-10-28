@@ -289,6 +289,17 @@ void NodesOnlyMesh<SPACE_DIM>::CalculateNodesOutsideLocalDomain()
         {
             mNodesToSendLeft.push_back(node_iter->GetIndex());
         }
+        // Periodic cases
+        else if ( owning_process == (PetscTools::GetNumProcs()-1) )
+        {
+            // We are on the base and need to send to the top (i.e. left)
+            mNodesToSendLeft.push_back(node_iter->GetIndex());
+        }
+        else if ( owning_process == 0 )
+        {
+            // We are on the top and need to send to the bottom process (i.e. right)
+            mNodesToSendRight.push_back(node_iter->GetIndex());
+        }
     }
 }
 
@@ -619,6 +630,12 @@ void NodesOnlyMesh<SPACE_DIM>::ResizeBoxCollection()
     {
         EnlargeBoxCollection();
     }
+}
+
+template<unsigned SPACE_DIM>
+bool NodesOnlyMesh<SPACE_DIM>::GetIsPeriodicAcrossProcsFromBoxCollection() const
+{
+    return mpBoxCollection->GetIsPeriodicAcrossProcs();
 }
 
 template<unsigned SPACE_DIM>
