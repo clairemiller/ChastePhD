@@ -62,6 +62,9 @@ DistributedBoxCollection<DIM>::DistributedBoxCollection(double boxWidth, c_vecto
 
     mDomainSize = domainSize;
 
+    // Set the periodicity across procs flag
+    mIsPeriodicAcrossProcs = (DIM==1 && mIsPeriodicInX) || (DIM==2 && mIsPeriodicInY) || (DIM==3 && mIsPeriodicInZ);
+
     // Calculate the number of boxes in each direction.
     mNumBoxesEachDirection = scalar_vector<unsigned>(DIM, 0u);
 
@@ -146,7 +149,7 @@ void DistributedBoxCollection<DIM>::SetupHaloBoxes()
     }
     // Otherwise if I am the top most and periodic in y (2d) or z (3d) add halo boxes for 
     // the base process
-    else if ( (mIsPeriodicInY && DIM == 2) || (mIsPeriodicInZ && DIM==3) )
+    else if ( mIsPeriodicAcrossProcs )
     {
         for (unsigned i=0; i < mNumBoxesInAFace; i++)
         {
@@ -154,6 +157,7 @@ void DistributedBoxCollection<DIM>::SetupHaloBoxes()
             mHaloBoxes.push_back(new_box);
 
             mHaloBoxesMapping[i] = mHaloBoxes.size()-1;
+
             mHalosRight.push_back( (hi-1)*mNumBoxesInAFace + i );
         }
     }
@@ -174,7 +178,7 @@ void DistributedBoxCollection<DIM>::SetupHaloBoxes()
     }
     // Otherwise if I am the bottom most and periodic in y (2d) or z (3d) add halo boxes for 
     // the top process
-    else if ( (mIsPeriodicInY && DIM == 2) || (mIsPeriodicInZ && DIM==3) )
+    else if ( mIsPeriodicAcrossProcs )
     {
         for (unsigned i=0; i < mNumBoxesInAFace; i++)
         {
@@ -183,6 +187,7 @@ void DistributedBoxCollection<DIM>::SetupHaloBoxes()
 
             unsigned global_index = (mNumBoxesEachDirection(DIM-1) - 1) * mNumBoxesInAFace + i;
             mHaloBoxesMapping[global_index] = mHaloBoxes.size()-1;
+
             mHalosLeft.push_back( i );
         }
 
@@ -235,7 +240,7 @@ bool DistributedBoxCollection<DIM>::IsHaloBox(unsigned globalIndex)
     bool is_halo_left = ((globalIndex < mMinBoxIndex) && !(globalIndex < mMinBoxIndex - mNumBoxesInAFace));
 
     // Also need to check for periodic boxes
-    if ( ( mIsPeriodicInY && DIM==2 ) || (mIsPeriodicInZ && DIM==3) )
+    if ( mIsPeriodicAcrossProcs )
     {
         if ( PetscTools::AmTopMost() )
         {
@@ -449,6 +454,12 @@ template<unsigned DIM>
 bool DistributedBoxCollection<DIM>::GetIsPeriodicInZ() const
 {
     return mIsPeriodicInZ;
+}
+
+template<unsigned DIM>
+bool DistributedBoxCollection<DIM>::GetIsPeriodicAcrossProcs() const
+{
+    return mIsPeriodicAcrossProcs;
 }
 
 template<unsigned DIM>
@@ -1610,6 +1621,21 @@ unsigned DistributedBoxCollection<DIM>::GetProcessOwningNode(Node<DIM>* pNode)
     else if (box_index < mMinBoxIndex)
     {
         containing_process--;
+    }
+
+    // Need a special case for periodicity
+    if (  mIsPeriodicAcrossProcs )
+    {
+        if (PetscTools::AmMaster() && box_index > ((mNumBoxesEachDirection[DIM-1]-1)*mNumBoxesInAFace-1))
+        {
+            // It needs to move to the top process
+            containing_process = PetscTools::GetNumProcs()-1;
+        }
+        else if (PetscTools::AmTopMost() && box_index < mNumBoxesInAFace)
+        {
+            // It needs to move to the bottom process
+            containing_process = 0;
+        }
     }
 
     return containing_process;

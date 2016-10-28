@@ -110,6 +110,9 @@ private:
     /** Whether the domain is periodic in the Z dimension. Note this doesn't work*/
     bool mIsPeriodicInZ;
 
+    /** Whether the domain is periodic across different processors (i.e. in parallel if DIM==3 and periodic in z, or DIM==2 and periodic in Y)*/
+    bool mIsPeriodicAcrossProcs;
+
     /** Whether the local boxes have been setup or not. */
     bool mAreLocalBoxesSet;
 
@@ -285,6 +288,11 @@ public:
      * @return Whether the domain is periodic in z
      */
     bool GetIsPeriodicInZ() const;
+
+    /**
+    * @return Whether the domain is periodic across processors
+    */
+    bool GetIsPeriodicAcrossProcs() const;
 
     /**
      * A function to get whether each dimension is periodic
