@@ -56,6 +56,7 @@ class NodeBasedCellPopulation : public AbstractCentreBasedCellPopulation<DIM>
 {
     friend class TestNodeBasedCellPopulation;
     friend class TestNodeBasedCellPopulationParallelMethods;
+    friend class TestPeriodicNodeBasedCellPopulationParallelMethods;
 
 protected:
 

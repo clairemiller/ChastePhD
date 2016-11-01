@@ -792,10 +792,6 @@ void NodeBasedCellPopulation<DIM>::SendCellsToNeighbourProcesses()
 template<unsigned DIM>
 void NodeBasedCellPopulation<DIM>::NonBlockingSendCellsToNeighbourProcesses()
 {
-
-    // Not written for periodicity across processors
-    assert( !mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection()  );
-
     if (!PetscTools::AmTopMost())
     {
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_right(&mCellsToSendRight, null_deleter());
@@ -808,6 +804,18 @@ void NodeBasedCellPopulation<DIM>::NonBlockingSendCellsToNeighbourProcesses()
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_left(&mCellsToSendLeft, null_deleter());
         mLeftCommunicator.ISendObject(p_cells_left, PetscTools::GetMyRank() - 1, tag);
     }
+    else if ( mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
+    {
+        int tag = SmallPow (2u, 1 + PetscTools::GetMyRank() ) * SmallPow (3u, 1 + PetscTools::GetNumProcs() - 1);
+        boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_left(&mCellsToSendLeft, null_deleter());
+        mLeftCommunicator.ISendObject(p_cells_left, PetscTools::GetNumProcs()-1, tag);
+    }
+    if ( PetscTools::AmTopMost() && mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
+    {
+        boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_right(&mCellsToSendRight, null_deleter());
+        int tag = SmallPow(2u, 1+ PetscTools::GetMyRank() ) * SmallPow (3u, 1 + 0);
+        mRightCommunicator.ISendObject(p_cells_right, 0, tag);
+    }
     // Now post receives to start receiving data before returning.
     if (!PetscTools::AmTopMost())
     {
@@ -819,6 +827,16 @@ void NodeBasedCellPopulation<DIM>::NonBlockingSendCellsToNeighbourProcesses()
         int tag = SmallPow (3u, 1 + PetscTools::GetMyRank() ) * SmallPow (2u, 1+ PetscTools::GetMyRank() - 1);
         mLeftCommunicator.IRecvObject(PetscTools::GetMyRank() - 1, tag);
     }
+    else if ( mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
+    {
+        int tag = SmallPow (3u, 1 + PetscTools::GetMyRank() ) * SmallPow (2u, 1+ PetscTools::GetNumProcs() - 1);
+        mLeftCommunicator.IRecvObject(PetscTools::GetNumProcs() - 1, tag);
+    }
+    if ( PetscTools::AmTopMost() && mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
+    {
+        int tag = SmallPow (3u, 1 + PetscTools::GetMyRank() ) * SmallPow (2u, 1+0);
+        mRightCommunicator.IRecvObject(0, tag);
+    }
 }
 
 template<unsigned DIM>
@@ -828,15 +846,11 @@ void NodeBasedCellPopulation<DIM>::GetReceivedCells()
     {
         mpCellsRecvRight = mRightCommunicator.GetRecvObject();
     }
-    if (!PetscTools::AmMaster())
+    if (!PetscTools::AmMaster() || mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
     {
         mpCellsRecvLeft = mLeftCommunicator.GetRecvObject();
     }
-    // Periodicity across processors
-    else if ( mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
-    {
-        mpCellsRecvLeft = mLeftCommunicator.GetRecvObject();
-    }
+    // Periodicity across processors has to be in this set order
     if ( PetscTools::AmTopMost() && mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
     {
         mpCellsRecvRight = mRightCommunicator.GetRecvObject();
@@ -874,7 +888,7 @@ void NodeBasedCellPopulation<DIM>::AddNodeAndCellToSendLeft(unsigned nodeIndex)
 template<unsigned DIM>
 void NodeBasedCellPopulation<DIM>::AddReceivedCells()
 {
-    if (!PetscTools::AmMaster())
+    if (!PetscTools::AmMaster() || mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
     {
         for (typename std::vector<std::pair<CellPtr, Node<DIM>* > >::iterator iter = mpCellsRecvLeft->begin();
              iter != mpCellsRecvLeft->end();
@@ -885,7 +899,7 @@ void NodeBasedCellPopulation<DIM>::AddReceivedCells()
             AddMovedCell(iter->first, p_node);
         }
     }
-    if (!PetscTools::AmTopMost())
+    if (!PetscTools::AmTopMost() || mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection())
     {
         for (typename std::vector<std::pair<CellPtr, Node<DIM>* > >::iterator iter = mpCellsRecvRight->begin();
              iter != mpCellsRecvRight->end();
@@ -982,7 +996,7 @@ void NodeBasedCellPopulation<DIM>::AddReceivedHaloCells()
 {
     GetReceivedCells();
 
-    if (!PetscTools::AmMaster())
+    if (!PetscTools::AmMaster() || mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection())
     {
         for (typename std::vector<std::pair<CellPtr, Node<DIM>* > >::iterator iter = mpCellsRecvLeft->begin();
                 iter != mpCellsRecvLeft->end();
@@ -993,7 +1007,7 @@ void NodeBasedCellPopulation<DIM>::AddReceivedHaloCells()
 
         }
     }
-    if (!PetscTools::AmTopMost())
+    if (!PetscTools::AmTopMost() || mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection())
     {
         for (typename std::vector<std::pair<CellPtr, Node<DIM>* > >::iterator iter = mpCellsRecvRight->begin();
                 iter != mpCellsRecvRight->end();
