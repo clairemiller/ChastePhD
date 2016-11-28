@@ -789,52 +789,66 @@ void NodeBasedCellPopulation<DIM>::SendCellsToNeighbourProcesses()
     }
 }
 
+// helper function for NonBlockaingSendCellsToNeighbourProcess() to calculate the tag
+unsigned calcMessageTag(unsigned senderI, unsigned receiverJ)
+{
+    /* Old function was overloading integer type for nProcs > 12
+     unsigned tag = SmallPow(2u, 1+ PetscTools::GetMyRank() ) * SmallPow (3u, 1 + PetscTools::GetMyRank() + 1);
+     Instead we use a Cantor pairing function which produces lower paired values
+     See: https://en.wikipedia.org/wiki/Pairing_function */
+    unsigned tag = (senderI+receiverJ)*(senderI+receiverJ+1) + 2*receiverJ;
+    tag = tag/2;
+    assert(tag < INT_MAX);
+    return tag;
+}
+
 template<unsigned DIM>
 void NodeBasedCellPopulation<DIM>::NonBlockingSendCellsToNeighbourProcesses()
 {
     if (!PetscTools::AmTopMost())
     {
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_right(&mCellsToSendRight, null_deleter());
-        int tag = SmallPow(2u, 1+ PetscTools::GetMyRank() ) * SmallPow (3u, 1 + PetscTools::GetMyRank() + 1);
+        unsigned tag = calcMessageTag( PetscTools::GetMyRank(), PetscTools::GetMyRank()+1 );
         mRightCommunicator.ISendObject(p_cells_right, PetscTools::GetMyRank() + 1, tag);
     }
     if (!PetscTools::AmMaster())
     {
-        int tag = SmallPow (2u, 1 + PetscTools::GetMyRank() ) * SmallPow (3u, 1 + PetscTools::GetMyRank() - 1);
+        unsigned tag = calcMessageTag( PetscTools::GetMyRank(), PetscTools::GetMyRank()-1 );
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_left(&mCellsToSendLeft, null_deleter());
         mLeftCommunicator.ISendObject(p_cells_left, PetscTools::GetMyRank() - 1, tag);
     }
     else if ( mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
     {
-        int tag = SmallPow (2u, 1 + PetscTools::GetMyRank() ) * SmallPow (3u, 1 + PetscTools::GetNumProcs() - 1);
+        unsigned tag = calcMessageTag( PetscTools::GetMyRank(), PetscTools::GetNumProcs()-1 );
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_left(&mCellsToSendLeft, null_deleter());
         mLeftCommunicator.ISendObject(p_cells_left, PetscTools::GetNumProcs()-1, tag);
     }
     if ( PetscTools::AmTopMost() && mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
     {
+        unsigned tag = calcMessageTag( PetscTools::GetMyRank(), 0 );
         boost::shared_ptr<std::vector<std::pair<CellPtr, Node<DIM>* > > > p_cells_right(&mCellsToSendRight, null_deleter());
-        int tag = SmallPow(2u, 1+ PetscTools::GetMyRank() ) * SmallPow (3u, 1 + 0);
         mRightCommunicator.ISendObject(p_cells_right, 0, tag);
     }
+
     // Now post receives to start receiving data before returning.
     if (!PetscTools::AmTopMost())
     {
-        int tag = SmallPow (3u, 1 + PetscTools::GetMyRank() ) * SmallPow (2u, 1+ PetscTools::GetMyRank() + 1);
+        unsigned tag = calcMessageTag( PetscTools::GetMyRank()+1, PetscTools::GetMyRank() );
         mRightCommunicator.IRecvObject(PetscTools::GetMyRank() + 1, tag);
     }
     if (!PetscTools::AmMaster())
     {
-        int tag = SmallPow (3u, 1 + PetscTools::GetMyRank() ) * SmallPow (2u, 1+ PetscTools::GetMyRank() - 1);
+        unsigned tag = calcMessageTag( PetscTools::GetMyRank()-1, PetscTools::GetMyRank() );
         mLeftCommunicator.IRecvObject(PetscTools::GetMyRank() - 1, tag);
     }
     else if ( mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
     {
-        int tag = SmallPow (3u, 1 + PetscTools::GetMyRank() ) * SmallPow (2u, 1+ PetscTools::GetNumProcs() - 1);
+        unsigned tag = calcMessageTag( PetscTools::GetNumProcs()-1, PetscTools::GetMyRank() );
         mLeftCommunicator.IRecvObject(PetscTools::GetNumProcs() - 1, tag);
     }
     if ( PetscTools::AmTopMost() && mpNodesOnlyMesh->GetIsPeriodicAcrossProcsFromBoxCollection() )
     {
-        int tag = SmallPow (3u, 1 + PetscTools::GetMyRank() ) * SmallPow (2u, 1+0);
+        unsigned tag = calcMessageTag( 0, PetscTools::GetMyRank() );
         mRightCommunicator.IRecvObject(0, tag);
     }
 }
