@@ -60,9 +60,7 @@ public:
 
         // Convert this to a Cylindrical2dNodesOnlyMesh
         std::vector<double> periodic_width(2,4.0);
-        std::vector<unsigned> periodic_dims(2,0);
-        periodic_dims[1] = 1;
-        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width, periodic_dims);
+        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width, true,true,false);
         p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 1.0);
 
         // Test CalculateBoundingBox() method
@@ -96,7 +94,7 @@ public:
         // Convert this to a Cylindrical2dNodesOnlyMesh
         std::vector<double> periodic_width(1,4.0);
         std::vector<unsigned> periodic_dims(1,0);
-        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,periodic_dims);
+        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,true,false,false);
         TS_ASSERT_THROWS_THIS(p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 1.5),
                               "The periodic width must be a multiple of cut off length.");
 
@@ -117,9 +115,7 @@ public:
 
         // Convert this to a PeriodicNdNodesOnlyMesh
         std::vector<double> periodic_width(2,4.0);
-        std::vector<unsigned> periodic_dims(2,0);
-        periodic_dims[1] = 1;
-        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,periodic_dims);
+        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,true,true,false);
         p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 1.0);
 
         c_vector<double, 2> node10_location = p_mesh->GetNode(10)->rGetLocation();
@@ -176,9 +172,7 @@ public:
 
         // Convert this to a PeriodicNdNodesOnlyMesh
         std::vector<double> periodic_width(2,4.0);
-        std::vector<unsigned> periodic_dims(2,0);
-        periodic_dims[1] = 1;
-        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,periodic_dims);
+        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,true,true,false);
         p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 1.0);
 
         // Move one of the nodes to past the periodic boundaries
@@ -222,9 +216,7 @@ public:
 
         // Convert this to a PeriodicNdNodesOnlyMesh
         std::vector<double> periodic_width(2,4.0);
-        std::vector<unsigned> periodic_dims(2,0);
-        periodic_dims[1] = 1;
-        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width, periodic_dims);
+        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width, true,true,false);
         p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 1.0);
 
         // ReMesh to make the box collection big enough to accommodate new nodes.
@@ -281,9 +273,7 @@ public:
 
         // Convert this to a PeriodicdNodesOnlyMesh
         std::vector<double> periodic_width(2,4.0);
-        std::vector<unsigned> periodic_dims(2,0);
-        periodic_dims[1] = 1;
-        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,periodic_dims);
+        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,true,true,false);
         p_mesh->ConstructNodesWithoutMesh(*p_generating_mesh, 1.0);
 
         //Check some node positions
@@ -318,7 +308,6 @@ public:
 
         double cut_off = 1.0;
         std::vector<double> periodic_width(1,3.0);
-        std::vector<unsigned> periodic_dims(1,0); // One periodic dimension in x
         /*
          * Nodes chosen so to test the cases that the domain width in x is
          * "divisible" by the cut_off, the y-dimension is not "divisible".
@@ -331,7 +320,7 @@ public:
         nodes.push_back(new Node<2>(3, false, 1.0, 1.0));
         nodes.push_back(new Node<2>(4, false, 2.5, 1.0));
 
-        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,periodic_dims);
+        PeriodicNdNodesOnlyMesh<2>* p_mesh = new PeriodicNdNodesOnlyMesh<2>(periodic_width,true,false,false);
         p_mesh->ConstructNodesWithoutMesh(nodes, cut_off);
 
         // Call SetupBoxCollection method not called unless EnlargeBoxCollection is called so we call manually
