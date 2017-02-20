@@ -130,6 +130,12 @@ void DistributedBoxCollection<DIM>::EmptyBoxes()
 template<unsigned DIM>
 void DistributedBoxCollection<DIM>::SetupHaloBoxes()
 {
+    // We don't need to do this if not parallel
+    if ( PetscTools::GetNumProcs() == 1 )
+    {
+        return;
+    }
+
     // Get top-most and bottom-most value of Distributed Box Stack.
     unsigned hi = mpDistributedBoxStackFactory->GetHigh();
     unsigned lo = mpDistributedBoxStackFactory->GetLow();
