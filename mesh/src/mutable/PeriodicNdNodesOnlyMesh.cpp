@@ -73,6 +73,11 @@ PeriodicNdNodesOnlyMesh<SPACE_DIM>::PeriodicNdNodesOnlyMesh(std::vector<double> 
 template<unsigned SPACE_DIM>
 void PeriodicNdNodesOnlyMesh<SPACE_DIM>::SetUpBoxCollection(double cutOffLength, c_vector<double, 2*SPACE_DIM> domainSize, int numLocalRows, bool isPeriodicInX, bool isPeriodicInY, bool isPeriodicInZ)
 {
+    // Check that we haven't got too many processors; the maximum number of processors is width/cutOffLength in the y (2D)/z (3D) direction
+    if ( mIsDimPeriodic[SPACE_DIM-1] && ((mWidth[mWidth.size()-1]+1e-14)/cutOffLength) < PetscTools::GetNumProcs() )
+    {
+        EXCEPTION("Too many processors for the periodic domain width and cut off length. NumProcs should be less than or equal to Y (in 2D) or Z (in 3D) width / Cut off length.\n");
+    }
     // Container for converting the periodic dims vector to a true/false input into box collection setup
     // For each periodic dimension:
     for (unsigned i=0; i < mPeriodicDims.size(); i++)
