@@ -83,7 +83,7 @@ void PeriodicNdNodesOnlyMesh<SPACE_DIM>::SetUpBoxCollection(double cutOffLength,
     for (unsigned i=0; i < mPeriodicDims.size(); i++)
     {
         // Ensure that the width is a multiple of cut-off length
-        if ( fmod(mWidth[i],cutOffLength ) > 1e-14 )
+        if ( fmod(mWidth[i]+1e-14,cutOffLength ) > 2e-14 )
         {
             EXCEPTION("The periodic width must be a multiple of cut off length.");
         }
