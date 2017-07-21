@@ -73,6 +73,10 @@ AbstractSimpleGenerationalCellCycleModel::AbstractSimpleGenerationalCellCycleMod
 void AbstractSimpleGenerationalCellCycleModel::ResetForDivision()
 {
     mGeneration++;
+    if (mpCell->GetCellProliferativeType()->IsType<StemCellProliferativeType>())
+    {
+        mGeneration = 0;
+    }
     if (mGeneration > mMaxTransitGenerations)
     {
         /*
@@ -87,10 +91,6 @@ void AbstractSimpleGenerationalCellCycleModel::ResetForDivision()
         boost::shared_ptr<AbstractCellProperty> p_diff_type =
             mpCell->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<DifferentiatedCellProliferativeType>();
         mpCell->SetCellProliferativeType(p_diff_type);
-    }
-    if (mpCell->GetCellProliferativeType()->IsType<StemCellProliferativeType>())
-    {
-        mGeneration = 0;
     }
     AbstractSimplePhaseBasedCellCycleModel::ResetForDivision();
 }

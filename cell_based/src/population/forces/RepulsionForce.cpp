@@ -78,6 +78,42 @@ void RepulsionForce<DIM>::AddForceContribution(AbstractCellPopulation<DIM>& rCel
         // Calculate the value of the rest length
         double rest_length = node_a_radius+node_b_radius;
 
+         // --------------- Claire's additions (modified) from GeneralisedLinearSpringForce ---------------
+
+        CellPtr p_cell_A = rCellPopulation.GetCellUsingLocationIndex(p_node_a->GetIndex());
+        CellPtr p_cell_B = rCellPopulation.GetCellUsingLocationIndex(p_node_b->GetIndex());
+
+        double ageA = p_cell_A->GetAge();
+        double ageB = p_cell_B->GetAge();
+
+        assert(!std::isnan(ageA));
+        assert(!std::isnan(ageB));
+
+        /*
+        * If the cells are both newly divided, then the rest length of the spring
+        * connecting them grows linearly with time, until 1 hour after division.
+        */
+        if (ageA < (this->mMeinekeSpringGrowthDuration) && ageB < (this->mMeinekeSpringGrowthDuration))
+        {
+            AbstractCentreBasedCellPopulation<DIM,DIM>* p_static_cast_cell_population = static_cast<AbstractCentreBasedCellPopulation<DIM,DIM>*>(&rCellPopulation);
+
+            std::pair<CellPtr,CellPtr> cell_pair = p_static_cast_cell_population->CreateCellPair(p_cell_A, p_cell_B);
+
+            if (p_static_cast_cell_population->IsMarkedSpring(cell_pair))
+            {
+                // Spring rest length increases from a small value to the normal rest length over 1 hour
+                double lambda = this->mMeinekeDivisionRestingSpringLength;
+                rest_length = lambda + (rest_length - lambda) * ageA/(this->mMeinekeSpringGrowthDuration);
+            }
+            if (ageA + SimulationTime::Instance()->GetTimeStep() >= (this->mMeinekeSpringGrowthDuration) )
+            {
+                // This spring is about to go out of scope
+                p_static_cast_cell_population->UnmarkSpring(cell_pair);
+            }
+        }
+        
+        // --------------- End Claire's additions from GeneralisedLinearSpringForce ---------------
+
         if (norm_2(unit_difference) < rest_length)
         {
             // Calculate the force between nodes

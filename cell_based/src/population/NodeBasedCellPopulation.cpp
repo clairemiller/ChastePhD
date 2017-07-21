@@ -704,6 +704,15 @@ CellPtr NodeBasedCellPopulation<DIM>::AddCell(CellPtr pNewCell, CellPtr pParentC
 
     p_new_node->SetRadius(p_parent_node->GetRadius());
 
+    // ---------- Claire's additions from MeshBasedCellPopulation ----------------
+
+    // Mark spring between parent cell and new cell
+    std::pair<CellPtr,CellPtr> cell_pair = this->CreateCellPair(pParentCell, p_created_cell);
+    this->MarkSpring(cell_pair);
+
+    // ---------- End Claire's additions from MeshBasedCellPopulation ----------------
+
+
     // Return pointer to new cell
     return p_created_cell;
 }
