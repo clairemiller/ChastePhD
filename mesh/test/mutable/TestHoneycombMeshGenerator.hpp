@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -55,7 +55,8 @@ private:
 
         for (unsigned i=0; i<num_nodes; i++)
         {
-            c_vector<double, 2> location = pMesh->GetNode(i)->rGetLocation();
+            c_vector<double, 2> location;
+            location = pMesh->GetNode(i)->rGetLocation();
             (*file) << location[0] << "\t" << location[1] << "\n" << std::flush;
         }
 

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -92,7 +92,8 @@ void SloughingCellKiller<DIM>::CheckAndLabelCellsForApoptosisOrDeath()
                  cell_iter != this->mpCellPopulation->End();
                  ++cell_iter)
             {
-                c_vector<double, 2> location = this->mpCellPopulation->GetLocationOfCellCentre(*cell_iter);
+                c_vector<double, 2> location;
+                location = this->mpCellPopulation->GetLocationOfCellCentre(*cell_iter);
                 double x = location[0];
                 double y = location[1];
 

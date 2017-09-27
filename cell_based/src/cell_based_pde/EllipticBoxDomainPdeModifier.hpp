@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -93,16 +93,16 @@ public:
      * @param pBoundaryCondition A shared pointer to an abstract boundary condition
      *     (defaults to NULL, corresponding to a constant boundary condition with value zero)
      * @param isNeumannBoundaryCondition Whether the boundary condition is Neumann (defaults to true)
-     * @param pMeshCuboid pointer to a ChasteCuboid specifying the outer boundary for the FE mesh (defaults to NULL)
+     * @param pMeshCuboid A shared pointer to a ChasteCuboid specifying the outer boundary for the FE mesh (defaults to NULL)
      * @param stepSize step size to be used in the FE mesh (defaults to 1.0, i.e. the default cell size)
      * @param solution solution vector (defaults to NULL)
      */
     EllipticBoxDomainPdeModifier(boost::shared_ptr<AbstractLinearPde<DIM,DIM> > pPde=boost::shared_ptr<AbstractLinearPde<DIM,DIM> >(),
                                  boost::shared_ptr<AbstractBoundaryCondition<DIM> > pBoundaryCondition=boost::shared_ptr<AbstractBoundaryCondition<DIM> >(),
                                  bool isNeumannBoundaryCondition=true,
-                                 ChasteCuboid<DIM>* pMeshCuboid=NULL,
+                                 boost::shared_ptr<ChasteCuboid<DIM> > pMeshCuboid=boost::shared_ptr<ChasteCuboid<DIM> >(),
                                  double stepSize=1.0,
-                                 Vec solution=NULL);
+                                 Vec solution=nullptr);
 
     /**
      * Destructor.
@@ -135,7 +135,7 @@ public:
      *
      * @return the full boundary conditions container
      */
-    virtual std::auto_ptr<BoundaryConditionsContainer<DIM,DIM,1> > ConstructBoundaryConditionsContainer(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    virtual std::shared_ptr<BoundaryConditionsContainer<DIM,DIM,1> > ConstructBoundaryConditionsContainer(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
 
     /**
      * Overridden OutputSimulationModifierParameters() method.
@@ -168,7 +168,7 @@ template<class Archive, unsigned DIM>
 inline void load_construct_data(
     Archive & ar, EllipticBoxDomainPdeModifier<DIM> * t, const unsigned int file_version)
 {
-    Vec solution = NULL;
+    Vec solution = nullptr;
 
     std::string archive_filename = ArchiveLocationInfo::GetArchiveDirectory() + "solution.vec";
     FileFinder file_finder(archive_filename, RelativeTo::Absolute);
@@ -181,7 +181,7 @@ inline void load_construct_data(
     ::new(t)EllipticBoxDomainPdeModifier<DIM>(boost::shared_ptr<AbstractLinearPde<DIM, DIM> >(),
                                               boost::shared_ptr<AbstractBoundaryCondition<DIM> >(),
                                               true,
-                                              NULL,
+                                              boost::shared_ptr<ChasteCuboid<DIM> >(),
                                               1.0,
                                               solution);
 }

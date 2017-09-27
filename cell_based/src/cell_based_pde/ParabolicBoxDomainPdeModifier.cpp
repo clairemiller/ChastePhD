@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -40,33 +40,28 @@ template<unsigned DIM>
 ParabolicBoxDomainPdeModifier<DIM>::ParabolicBoxDomainPdeModifier(boost::shared_ptr<AbstractLinearPde<DIM,DIM> > pPde,
                                                                   boost::shared_ptr<AbstractBoundaryCondition<DIM> > pBoundaryCondition,
                                                                   bool isNeumannBoundaryCondition,
-                                                                  ChasteCuboid<DIM>* pMeshCuboid,
+                                                                  boost::shared_ptr<ChasteCuboid<DIM> > pMeshCuboid,
                                                                   double stepSize,
                                                                   Vec solution)
     : AbstractBoxDomainPdeModifier<DIM>(pPde,
-    		                            pBoundaryCondition,
-    		                            isNeumannBoundaryCondition,
-    		                            pMeshCuboid,
-    		                            stepSize,
-    		                            solution)
+                                        pBoundaryCondition,
+                                        isNeumannBoundaryCondition,
+                                        pMeshCuboid,
+                                        stepSize,
+                                        solution)
 {
 }
 
 template<unsigned DIM>
 ParabolicBoxDomainPdeModifier<DIM>::~ParabolicBoxDomainPdeModifier()
 {
-    // If we have used this modifier, then we will have created a solution vector
-    if (this->mSolution)
-    {
-        PetscTools::Destroy(this->mSolution);
-    }
 }
 
 template<unsigned DIM>
 void ParabolicBoxDomainPdeModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
 {
     // Set up boundary conditions
-    std::auto_ptr<BoundaryConditionsContainer<DIM,DIM,1> > p_bcc = ConstructBoundaryConditionsContainer(rCellPopulation);
+    std::shared_ptr<BoundaryConditionsContainer<DIM,DIM,1> > p_bcc = ConstructBoundaryConditionsContainer(rCellPopulation);
 
     this->UpdateCellPdeElementMap(rCellPopulation);
 
@@ -110,9 +105,9 @@ void ParabolicBoxDomainPdeModifier<DIM>::SetupSolve(AbstractCellPopulation<DIM,D
 }
 
 template<unsigned DIM>
-std::auto_ptr<BoundaryConditionsContainer<DIM,DIM,1> > ParabolicBoxDomainPdeModifier<DIM>::ConstructBoundaryConditionsContainer(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
+std::shared_ptr<BoundaryConditionsContainer<DIM,DIM,1> > ParabolicBoxDomainPdeModifier<DIM>::ConstructBoundaryConditionsContainer(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
 {
-    std::auto_ptr<BoundaryConditionsContainer<DIM,DIM,1> > p_bcc(new BoundaryConditionsContainer<DIM,DIM,1>(false));
+    std::shared_ptr<BoundaryConditionsContainer<DIM,DIM,1> > p_bcc(new BoundaryConditionsContainer<DIM,DIM,1>(false));
 
     if (!this->mSetBcsOnBoxBoundary)
     {

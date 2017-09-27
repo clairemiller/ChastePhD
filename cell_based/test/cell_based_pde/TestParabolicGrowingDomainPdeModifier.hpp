@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -37,31 +37,36 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define TESTPARABOLICGROWINGDOMAINPDEMODIFIER_HPP_
 
 #include <cxxtest/TestSuite.h>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
-#include "CheckpointArchiveTypes.hpp"
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
+// This macro prevents errors with GCC 4.8 of form "unable to find numeric literal operator 'operator"" Q'"
+// when compiling with -std=gnu++11 (see #2929). \todo: remove when GCC 4.8 is no longer supported.
+#define BOOST_MATH_DISABLE_FLOAT128
 #include <boost/math/special_functions/bessel.hpp>
-#include "SmartPointers.hpp"
+
 #include "AbstractCellBasedWithTimingsTestSuite.hpp"
-#include "ParabolicGrowingDomainPdeModifier.hpp"
-#include "CellwiseSourceParabolicPde.hpp"
-#include "UniformSourceParabolicPde.hpp"
-#include "UniformCellCycleModel.hpp"
 #include "ApoptoticCellProperty.hpp"
-#include "DifferentiatedCellProliferativeType.hpp"
-#include "CellsGenerator.hpp"
-#include "FixedG1GenerationalCellCycleModel.hpp"
-#include "MeshBasedCellPopulationWithGhostNodes.hpp"
 #include "AveragedSourceParabolicPde.hpp"
+#include "CaBasedCellPopulation.hpp"
+#include "CellsGenerator.hpp"
+#include "CellwiseSourceParabolicPde.hpp"
+#include "CheckpointArchiveTypes.hpp"
+#include "DifferentiatedCellProliferativeType.hpp"
+#include "FixedG1GenerationalCellCycleModel.hpp"
 #include "HoneycombMeshGenerator.hpp"
-#include "NodeBasedCellPopulation.hpp"
-#include "VertexBasedCellPopulation.hpp"
 #include "HoneycombVertexMeshGenerator.hpp"
+#include "MeshBasedCellPopulationWithGhostNodes.hpp"
+#include "NodeBasedCellPopulation.hpp"
+#include "ParabolicGrowingDomainPdeModifier.hpp"
 #include "PottsBasedCellPopulation.hpp"
 #include "PottsMeshGenerator.hpp"
-#include "CaBasedCellPopulation.hpp"
 #include "ReplicatableVector.hpp"
+#include "SmartPointers.hpp"
+#include "UniformCellCycleModel.hpp"
+#include "UniformSourceParabolicPde.hpp"
+#include "VertexBasedCellPopulation.hpp"
 
 // This test is always run sequentially (never in parallel)
 #include "FakePetscSetup.hpp"
@@ -247,7 +252,8 @@ public:
              cell_iter != cell_population.End();
              ++cell_iter)
         {
-            c_vector<double,2> cell_location = cell_population.GetLocationOfCellCentre(*cell_iter);
+            c_vector<double,2> cell_location;
+            cell_location = cell_population.GetLocationOfCellCentre(*cell_iter);
             double r = sqrt(cell_location(0)*cell_location(0) + cell_location(1)*cell_location(1));
             double u_exact = boost::math::cyl_bessel_j(0,r) / boost::math::cyl_bessel_j(0,1);
 
@@ -269,9 +275,10 @@ public:
         // Make cells with r<1/2 apoptotic (so no source term)
         boost::shared_ptr<AbstractCellProperty> p_apoptotic_property =
                         cells[0]->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<ApoptoticCellProperty>();
-        for (unsigned i =0; i<cells.size(); i++)
+        for (unsigned i=0; i<cells.size(); i++)
         {
-            c_vector<double,2> cell_location = mesh.GetNode(i)->rGetLocation();
+            c_vector<double,2> cell_location;
+            cell_location = mesh.GetNode(i)->rGetLocation();
             double r = sqrt(cell_location(0)*cell_location(0) + cell_location(1)*cell_location(1));
             if (r > 0.5)
             {
@@ -401,9 +408,10 @@ public:
         // Make cells with x < 3.0 apoptotic (so no source term)
         boost::shared_ptr<AbstractCellProperty> p_apoptotic_property =
                        cells[0]->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<ApoptoticCellProperty>();
-        for (unsigned i =0; i<cells.size(); i++)
+        for (unsigned i=0; i<cells.size(); i++)
         {
-            c_vector<double,2> cell_location = p_mesh->GetNode(i)->rGetLocation();
+            c_vector<double,2> cell_location;
+            cell_location = p_mesh->GetNode(i)->rGetLocation();
             if (cell_location(0) < 3.0)
             {
                 cells[i]->AddCellProperty(p_apoptotic_property);
@@ -458,9 +466,10 @@ public:
         // Make cells with x < 3.0 apoptotic (so no source term)
         boost::shared_ptr<AbstractCellProperty> p_apoptotic_property =
                         cells[0]->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<ApoptoticCellProperty>();
-        for (unsigned i =0; i<cells.size(); i++)
+        for (unsigned i=0; i<cells.size(); i++)
         {
-            c_vector<double,2> cell_location = p_mesh->GetNode(i)->rGetLocation();
+            c_vector<double,2> cell_location;
+            cell_location = p_mesh->GetNode(i)->rGetLocation();
             if (cell_location(0) < 3.0)
             {
                 cells[i]->AddCellProperty(p_apoptotic_property);
@@ -521,9 +530,10 @@ public:
         // Make cells with x < 3.0 apoptotic (so no source term)
         boost::shared_ptr<AbstractCellProperty> p_apoptotic_property =
                         cells[0]->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<ApoptoticCellProperty>();
-        for (unsigned i =0; i<cells.size(); i++)
+        for (unsigned i=0; i<cells.size(); i++)
         {
-            c_vector<double,2> cell_location = p_mesh->GetCentroidOfElement(i);
+            c_vector<double,2> cell_location;
+            cell_location = p_mesh->GetCentroidOfElement(i);
             if (cell_location(0) < 3.0)
             {
                 cells[i]->AddCellProperty(p_apoptotic_property);
@@ -584,9 +594,10 @@ public:
         // Make cells with x < 3.0 apoptotic (so no source term)
         boost::shared_ptr<AbstractCellProperty> p_apoptotic_property =
                         cells[0]->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<ApoptoticCellProperty>();
-        for (unsigned i =0; i<cells.size(); i++)
+        for (unsigned i=0; i<cells.size(); i++)
         {
-            c_vector<double,2> cell_location = p_mesh->GetCentroidOfElement(i);
+            c_vector<double,2> cell_location;
+            cell_location = p_mesh->GetCentroidOfElement(i);
             if (cell_location(0) < 3.0)
             {
                 cells[i]->AddCellProperty(p_apoptotic_property);
@@ -654,7 +665,8 @@ public:
                 cells[0]->rGetCellPropertyCollection().GetCellPropertyRegistry()->Get<ApoptoticCellProperty>();
         for (unsigned i=0; i<cells.size(); i++)
         {
-            c_vector<double,2> cell_location = p_mesh->GetNode(i)->rGetLocation();
+            c_vector<double,2> cell_location;
+            cell_location = p_mesh->GetNode(i)->rGetLocation();
             if (cell_location(0) < 3.0)
             {
                 cells[i]->AddCellProperty(p_apoptotic_property);

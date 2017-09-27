@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -125,6 +125,11 @@ protected:
     /** File that the values of the PDE solution are written out to. */
     out_stream mpVizPdeSolutionResultsFile;
 
+    /**
+     * Whether to delete the finite element mesh when we are destroyed.
+     */
+    bool mDeleteFeMesh;
+
 public:
 
     /**
@@ -139,7 +144,7 @@ public:
     AbstractPdeModifier(boost::shared_ptr<AbstractLinearPde<DIM,DIM> > pPde=NULL,
                         boost::shared_ptr<AbstractBoundaryCondition<DIM> > pBoundaryCondition=boost::shared_ptr<AbstractBoundaryCondition<DIM> >(),
                         bool isNeumannBoundaryCondition=true,
-                        Vec solution=NULL);
+                        Vec solution=nullptr);
 
     /**
      * Destructor.
@@ -187,7 +192,7 @@ public:
      * @param pMesh Pointer to a tetrahedral mesh
      * @param pCellPdeElementMap map between cells and elements
      */
-    void SetUpSourceTermsForAveragedSourcePde(TetrahedralMesh<DIM,DIM>* pMesh, std::map<CellPtr, unsigned>* pCellPdeElementMap=NULL);
+    void SetUpSourceTermsForAveragedSourcePde(TetrahedralMesh<DIM,DIM>* pMesh, std::map<CellPtr, unsigned>* pCellPdeElementMap=nullptr);
 
     /**
      * @return mSolution.
@@ -225,7 +230,8 @@ public:
     virtual void UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation)=0;
 
     /**
-     * Overridden UpdateAtEndOfOutputTimeStep() method.
+     * Overridden UpdateAtEndOfOutputTimeStep() method,
+     * after UpdateAtEndOfTimeStep() has been called.
      *
      * Output the solution to the PDE at each cell to VTK and, if mOutputSolutionAtPdeNodes is set to true,
      * output the solution to the PDE at each node of mpFeMesh to mpVizPdeSolutionResultsFile.

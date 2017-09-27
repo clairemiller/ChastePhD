@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -69,12 +69,6 @@ private:
         archive & boost::serialization::base_object<AbstractPdeModifier<DIM> >(*this);
     }
 
-    /**
-     * Whether to delete the mesh when we are destroyed.
-     * Needed if to free memory if creating meshes.
-     */
-    bool mDeleteMesh;
-
 public:
 
     /**
@@ -89,7 +83,7 @@ public:
     AbstractGrowingDomainPdeModifier(boost::shared_ptr<AbstractLinearPde<DIM,DIM> > pPde=boost::shared_ptr<AbstractLinearPde<DIM,DIM> >(),
                                      boost::shared_ptr<AbstractBoundaryCondition<DIM> > pBoundaryCondition=boost::shared_ptr<AbstractBoundaryCondition<DIM> >(),
                                      bool isNeumannBoundaryCondition=true,
-                                     Vec solution=NULL);
+                                     Vec solution=nullptr);
 
     /**
      * Destructor.

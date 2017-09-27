@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -82,8 +82,10 @@ public:
         // Check that the image nodes are where they should be.
         for (unsigned i=0; i<p_mesh->mLeftOriginals.size(); i++)
         {
-            c_vector<double,2> original_location = p_mesh->GetNode(p_mesh->mLeftOriginals[i])->rGetLocation();
-            c_vector<double,2> image_location = p_mesh->GetNode(p_mesh->mLeftImages[i])->rGetLocation();
+            c_vector<double,2> original_location;
+            original_location = p_mesh->GetNode(p_mesh->mLeftOriginals[i])->rGetLocation();
+            c_vector<double,2> image_location;
+            image_location = p_mesh->GetNode(p_mesh->mLeftImages[i])->rGetLocation();
 
             TS_ASSERT_DELTA(original_location[0] + crypt_width, image_location[0], 1e-7);
             TS_ASSERT_DELTA(original_location[1], image_location[1], 1e-7);
@@ -91,8 +93,10 @@ public:
 
         for (unsigned i=0; i<p_mesh->mRightOriginals.size(); i++)
         {
-            c_vector<double,2> original_location = p_mesh->GetNode(p_mesh->mRightOriginals[i])->rGetLocation();
-            c_vector<double,2> image_location = p_mesh->GetNode(p_mesh->mRightImages[i])->rGetLocation();
+            c_vector<double,2> original_location;
+            original_location = p_mesh->GetNode(p_mesh->mRightOriginals[i])->rGetLocation();
+            c_vector<double,2> image_location;
+            image_location = p_mesh->GetNode(p_mesh->mRightImages[i])->rGetLocation();
 
             TS_ASSERT_DELTA(original_location[0] - crypt_width, image_location[0], 1e-7);
             TS_ASSERT_DELTA(original_location[1], image_location[1], 1e-7);

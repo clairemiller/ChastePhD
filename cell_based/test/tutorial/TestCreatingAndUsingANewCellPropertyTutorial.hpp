@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -218,7 +218,8 @@ public:
             {
                 unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter);
 
-                c_vector<double, 2> location = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
+                c_vector<double, 2> location;
+                location = rCellPopulation.GetLocationOfCellCentre(*cell_iter);
                 c_vector<double, 2> force = -1.0 * mStrength * location;
                 rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(force);
             }

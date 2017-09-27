@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2016, University of Oxford.
+Copyright (c) 2005-2017, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -153,7 +153,8 @@ MutableVertexMesh<2, 2>* Toroidal2dVertexMesh::GetMeshForVtk()
     // Create four copies of each node
     for (unsigned index=0; index<num_nodes; index++)
     {
-        c_vector<double, 2> location = GetNode(index)->rGetLocation();
+        c_vector<double, 2> location;
+        location = GetNode(index)->rGetLocation();
 
         // Node copy at original location
         Node<2>* p_node = new Node<2>(index, false, location[0], location[1]);
