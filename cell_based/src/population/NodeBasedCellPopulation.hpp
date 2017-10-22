@@ -113,6 +113,9 @@ private:
     /** The frequency at which the mesh is rebalanced */
     unsigned mLoadBalanceFrequency;
 
+    /** The number of deaths that have occurred */
+    unsigned mNumDeaths;
+
     /** Needed for serialization. */
     friend class boost::serialization::access;
     /**
@@ -324,6 +327,12 @@ public:
      * @return number of cells removed
      */
     unsigned RemoveDeadCells();
+
+    /**
+     * Get the number of cells removed during the simulation
+     * @return mNumDeaths
+     */
+    unsigned GetNumDeaths() const;
 
     /**
      * Reset the member variables #mNodePairs and mpBoxCollection in the underlying mesh.

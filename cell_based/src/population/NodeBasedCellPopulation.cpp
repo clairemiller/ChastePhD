@@ -47,7 +47,8 @@ NodeBasedCellPopulation<DIM>::NodeBasedCellPopulation(NodesOnlyMesh<DIM>& rMesh,
       mDeleteMesh(deleteMesh),
       mUseVariableRadii(false),
       mLoadBalanceMesh(false),
-      mLoadBalanceFrequency(100)
+      mLoadBalanceFrequency(100),
+      mNumDeaths(0)
 {
     mpNodesOnlyMesh = static_cast<NodesOnlyMesh<DIM>* >(&(this->mrMesh));
 
@@ -251,7 +252,14 @@ unsigned NodeBasedCellPopulation<DIM>::RemoveDeadCells()
         }
     }
 
+    mNumDeaths += num_removed;
     return num_removed;
+}
+
+template<unsigned DIM>
+unsigned NodeBasedCellPopulation<DIM>::GetNumDeaths() const
+{
+    return mNumDeaths;
 }
 
 template<unsigned DIM>
