@@ -94,7 +94,7 @@ const NodesOnlyMesh<DIM>& NodeBasedCellPopulation<DIM>::rGetMesh() const
 template<unsigned DIM>
 std::set<std::pair<CellPtr,CellPtr> >& NodeBasedCellPopulation<DIM>::rGetMarkedSprings()
 {
-    return mMarkedSprings;
+    return this->mMarkedSprings;
 }
 
 template<unsigned DIM>
@@ -253,7 +253,7 @@ unsigned NodeBasedCellPopulation<DIM>::RemoveDeadCells()
                 {
                     CellPtr p_cell = (i==0 ? r_pair.first : r_pair.second);
 
-                    if (p_cell == *it)
+                    if (p_cell == *cell_iter)
                     {
                         // Remember to purge this spring
                         pairs_to_remove.push_back(&r_pair);
