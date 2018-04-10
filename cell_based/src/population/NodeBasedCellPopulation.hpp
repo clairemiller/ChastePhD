@@ -286,6 +286,11 @@ public:
     const NodesOnlyMesh<DIM>& rGetMesh() const;
 
     /**
+     * @return a reference to mMarkedSprings
+     */
+    std::set<std::pair<CellPtr,CellPtr> >& rGetMarkedSprings();
+
+    /**
      * Overridden GetTetrahedralMeshForPdeModifier() method.
      *
      * @return a pointer to a tetrahedral mesh whose nodes match those of the NodesOnlyMesh.

@@ -92,6 +92,12 @@ const NodesOnlyMesh<DIM>& NodeBasedCellPopulation<DIM>::rGetMesh() const
 }
 
 template<unsigned DIM>
+std::set<std::pair<CellPtr,CellPtr> >& NodeBasedCellPopulation<DIM>::rGetMarkedSprings()
+{
+    return mMarkedSprings;
+}
+
+template<unsigned DIM>
 TetrahedralMesh<DIM, DIM>* NodeBasedCellPopulation<DIM>::GetTetrahedralMeshForPdeModifier()
 {
     // Note that this code does not yet work in parallel.
@@ -234,6 +240,36 @@ unsigned NodeBasedCellPopulation<DIM>::RemoveDeadCells()
     {
         if ((*cell_iter)->IsDead())
         {
+            // ---------- Claire's additions from MeshBasedCellPopulation ----------------
+            // Check if this cell is in a marked spring
+            std::vector<const std::pair<CellPtr,CellPtr>*> pairs_to_remove; // Pairs that must be purged
+            for (std::set<std::pair<CellPtr,CellPtr> >::iterator it1 = this->mMarkedSprings.begin();
+                 it1 != this->mMarkedSprings.end();
+                 ++it1)
+            {
+                const std::pair<CellPtr,CellPtr>& r_pair = *it1;
+
+                for (unsigned i=0; i<2; i++)
+                {
+                    CellPtr p_cell = (i==0 ? r_pair.first : r_pair.second);
+
+                    if (p_cell == *it)
+                    {
+                        // Remember to purge this spring
+                        pairs_to_remove.push_back(&r_pair);
+                        break;
+                    }
+                }
+            }
+            // Purge any marked springs that contained this cell
+            for (std::vector<const std::pair<CellPtr,CellPtr>* >::iterator pair_it = pairs_to_remove.begin();
+                 pair_it != pairs_to_remove.end();
+                 ++pair_it)
+            {
+                this->mMarkedSprings.erase(**pair_it);
+            }
+            // ---------- End Claire's additions from MeshBasedCellPopulation ------------
+
             // Remove the node from the mesh
             num_removed++;
             unsigned location_index = mpNodesOnlyMesh->SolveNodeMapping(this->GetLocationIndexUsingCell((*cell_iter)));
