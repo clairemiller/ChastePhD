@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2017, University of Oxford.
+Copyright (c) 2005-2018, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -55,6 +55,7 @@ AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::AbstractCellBasedSimulation(
       mInitialiseCells(initialiseCells),
       mNoBirth(false),
       mUpdateCellPopulation(true),
+      mUpdateCellPopulationInterval(1),
       mOutputDirectory(""),
       mSimulationOutputDirectory(mOutputDirectory),
       mNumBirths(0),
@@ -257,6 +258,13 @@ bool AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::GetUpdateCellPopulation
 }
 
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
+void AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::SetUpdateCellPopulationInterval(unsigned interval)
+{
+    assert(interval > 0);
+    mUpdateCellPopulationInterval = interval;
+}
+
+template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 void AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::SetNoBirth(bool noBirth)
 {
     mNoBirth = noBirth;
@@ -366,6 +374,9 @@ void AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::Solve()
         OutputFileHandler output_file_handler2(this->mSimulationOutputDirectory+"/", false);
         mpCellVelocitiesFile = output_file_handler2.OpenOutputFile("cellvelocities.dat");
     }
+
+    OutputFileHandler output_file_handler3(this->mSimulationOutputDirectory+"/", false);
+    mpTimestepsFile = output_file_handler3.OpenOutputFile("timesteps.dat");
 
     if (PetscTools::AmMaster())
     {
@@ -551,6 +562,7 @@ void AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::Solve()
     {
         mpCellVelocitiesFile->close();
     }
+    mpTimestepsFile->close();
 
     if (PetscTools::AmMaster())
     {
@@ -590,7 +602,8 @@ void AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::UpdateCellPopulation()
 
     // Update topology of cell population
     CellBasedEventHandler::BeginEvent(CellBasedEventHandler::UPDATECELLPOPULATION);
-    if (mUpdateCellPopulation)
+    SimulationTime* p_time = SimulationTime::Instance();
+    if (mUpdateCellPopulation && (p_time->GetTimeStepsElapsed() % mUpdateCellPopulationInterval == 0) )
     {
         LOG(1, "\tUpdating cell population...");
         mrCellPopulation.Update(births_or_death_occurred);
@@ -695,6 +708,8 @@ void AbstractCellBasedSimulation<ELEMENT_DIM,SPACE_DIM>::OutputSimulationParamet
 {
     *rParamsFile << "\t\t<Dt>" << mDt << "</Dt>\n";
     *rParamsFile << "\t\t<EndTime>" << mEndTime << "</EndTime>\n";
+    *rParamsFile << "\t\t<UpdateCellPopulation>" << mUpdateCellPopulation << "</UpdateCellPopulation>\n";
+    *rParamsFile << "\t\t<UpdateCellPopulationInterval>" << mUpdateCellPopulationInterval << "</UpdateCellPopulationInterval>\n";
     *rParamsFile << "\t\t<SamplingTimestepMultiple>" << mSamplingTimestepMultiple << "</SamplingTimestepMultiple>\n";
     *rParamsFile << "\t\t<OutputDivisionLocations>" << mOutputDivisionLocations << "</OutputDivisionLocations>\n";
     *rParamsFile << "\t\t<OutputCellVelocities>" << mOutputCellVelocities << "</OutputCellVelocities>\n";

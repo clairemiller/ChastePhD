@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2017, University of Oxford.
+Copyright (c) 2005-2018, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -95,8 +95,7 @@ public:
      * Create a simulation of a NodeBasedCellPopulation with a NodeBasedCellPopulationMechanicsSystem.
      * Test that no exceptions are thrown, and write the results to file.
      */
-    
-    void DNRTestSimpleMonolayer() throw (Exception)
+    void TestSimpleMonolayer()
     {
         // Create a simple mesh
         unsigned num_cells_depth = 5;
@@ -220,7 +219,7 @@ public:
      * Create a simulation of a NodeBasedCellPopulation with a Cylindrical2dNodesOnlyMesh
      * to test periodicity.
      */
-    void DNRTestSimpleXPeriodicMonolayer() throw (Exception)
+    void TestSimplePeriodicMonolayer()
     {
         EXIT_IF_PARALLEL;    // HoneycombMeshGenereator does not work in parallel.
 
@@ -616,11 +615,8 @@ public:
     /**
      * Create a simulation of a NodeBasedCellPopulation with different cell radii.
      */
-    void DNRTestSimpleMonolayerWithDifferentRadii() throw (Exception)
-    {
-        // Creates nodes and mesh
+    void TestSimpleMonolayerWithDifferentRadii()
         std::vector<Node<2>*> nodes;
-        nodes.push_back(new Node<2>(0,  false,  0.0, 0.0));
         nodes.push_back(new Node<2>(1,  false,  1.0, 0.0));
         NodesOnlyMesh<2> mesh;
         mesh.ConstructNodesWithoutMesh(nodes, 5.0);    // Large cut off as larger cells.
@@ -681,7 +677,8 @@ public:
     /**
      * Create a simulation of a NodeBasedCellPopulation with variable cell radii.
      */
-    void DNRTestSimpleMonolayerWithVariableRadii() throw (Exception)
+
+    void TestSimpleMonolayerWithVariableRadii()
     {
         // Creates nodes and mesh
         std::vector<Node<2>*> nodes;
@@ -765,7 +762,7 @@ public:
         }
     }
 
-    void DNRTestSimulationWithBoxes() throw (Exception)
+    void TestSimulationWithBoxes()
     {
         EXIT_IF_PARALLEL;    // HoneycombMeshGenereator does not work in parallel.
 
@@ -821,7 +818,7 @@ public:
      * Create a simulation of a NodeBasedCellPopulation with a NodeBasedCellPopulationMechanicsSystem
      * and a CellKiller. Test that no exceptions are thrown, and write the results to file.
      */
-    void DNRTestCellDeath() throw (Exception)
+    void TestCellDeath()
     {
         EXIT_IF_PARALLEL;    // HoneycombMeshGenereator does not work in parallel.
 
@@ -885,7 +882,7 @@ public:
 
     double mNode3x, mNode4x, mNode3y, mNode4y; // To preserve locations between the below test and test load.
 
-    void DNRTestStandardResultForArchivingTestsBelow() throw (Exception)
+    void TestStandardResultForArchivingTestsBelow()
     {
         EXIT_IF_PARALLEL;    // HoneycombMeshGenereator does not work in parallel.
 
@@ -942,7 +939,7 @@ public:
     }
 
     // Testing Save()
-    void DNRTestSave() throw (Exception)
+    void TestSave()
     {
         EXIT_IF_PARALLEL; // HoneycombMeshGenereator does not work in parallel
 
@@ -998,7 +995,7 @@ public:
     }
 
     // Testing Load() (based on previous two tests)
-    void DNRTestLoad() throw (Exception)
+    void TestLoad()
     {
         EXIT_IF_PARALLEL;    // Cell based archiving doesn't work in parallel.
 
@@ -1039,7 +1036,7 @@ public:
     /**
      * Create a simulation of a NodeBasedCellPopulation to test movement threshold.
      */
-    void DNRTestMovementThreshold() throw (Exception)
+    void TestMovementThreshold()
     {
         EXIT_IF_PARALLEL;   // This test doesn't work in parallel because only one process will throw.
 
@@ -1126,7 +1123,7 @@ public:
      * Create a simulation of a NodeBasedCellPopulation with a NodeBasedCellPopulationMechanicsSystem
      * and a CellKiller. Test that the simulation can be archived and loaded after cells have been killed.
      */
-    void TestCellDeathWithArchiving() throw (Exception)
+    void TestCellDeathWithArchiving()
     {
         EXIT_IF_PARALLEL;    // HoneycombMeshGenereator and archiving do not work in parallel
         {

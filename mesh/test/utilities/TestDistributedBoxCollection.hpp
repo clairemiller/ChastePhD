@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2005-2017, University of Oxford.
+Copyright (c) 2005-2018, University of Oxford.
 All rights reserved.
 
 University of Oxford means the Chancellor, Masters and Scholars of the
@@ -238,7 +238,7 @@ private:
 
 public:
 
-    void TestBox() throw (Exception)
+    void TestBox()
     {
         Box<2> test_box;
 
@@ -260,7 +260,7 @@ public:
     }
 
 
-    void TestBoxGeneration1d() throw (Exception)
+    void TestBoxGeneration1d()
     {
         // Create a mesh
         TetrahedralMesh<1,1> mesh;
@@ -366,7 +366,7 @@ public:
 
 
     // very simple test
-    void TestAddElement() throw(Exception)
+    void TestAddElement()
     {
         TetrahedralMesh<1,1> mesh;
         mesh.ConstructRegularSlabMesh(0.5, 1.0);
@@ -394,7 +394,7 @@ public:
         }
     }
 
-    void TestSetupAllLocalBoxes2d() throw(Exception)
+    void TestSetupAllLocalBoxes2d()
     {
         double width = 1.0;
 
@@ -534,7 +534,8 @@ public:
         }
     }
 
-    void TestSetupLocalBoxesHalfOnly2d() throw(Exception)
+
+    void TestSetupAllLocalBoxes2dPeriodic()
     {
         double width = 1.0;
 
@@ -680,7 +681,8 @@ public:
         }
     }
 
-    void TestSetupAllLocalBoxes3d() throw(Exception)
+
+    void TestSetupAllLocalBoxes3d()
     {
         if (PetscTools::GetNumProcs() > 2)
         {
@@ -1152,7 +1154,7 @@ public:
     //
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
-    void TestSetupHaloBoxes1d2d3d() throw (Exception)
+    void TestSetupHaloBoxes1d2d3d()
     {
         unsigned num_procs = PetscTools::GetNumProcs();
         DoSetupHaloBoxes<1>(num_procs);
@@ -1160,7 +1162,7 @@ public:
         DoSetupHaloBoxes<3>(num_procs);
     }
 
-    void TestUpdateHaloBoxes1d2d3d() throw (Exception)
+    void TestUpdateHaloBoxes1d2d3d()
     {
         unsigned num_procs = PetscTools::GetNumProcs();
         DoUpdateHaloBoxes<1>(num_procs);
@@ -1178,7 +1180,7 @@ public:
     //
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
-    void TestPairsReturned1d() throw (Exception)
+    void TestPairsReturned1d()
     {
         std::vector< ChastePoint<1>* > points(5);
         points[0] = new ChastePoint<1>(0.2);
@@ -1402,7 +1404,7 @@ public:
         }
     }
 
-    void TestBoxGeneration2d() throw (Exception)
+    void TestBoxGeneration2d()
     {
         if (PetscTools::GetNumProcs() > 3)
         {
@@ -1514,7 +1516,7 @@ public:
      * calculations.  Note that failure of this test on a given architecture implies
      * the failure of node-based cell simulations
      */
-    void TestLargeBoxCollection2d() throw (Exception)
+    void TestLargeBoxCollection2d()
     {
         double cut_off_length = 1e-3;
 
@@ -1544,7 +1546,7 @@ public:
 
     }
 
-    void TestPairsReturned2d() throw (Exception)
+    void TestPairsReturned2d()
     {
         std::vector< ChastePoint<2>* > points(10);
         points[0] = new ChastePoint<2>(0.2, 3.7);
@@ -1920,7 +1922,7 @@ public:
         }
     }
 
-    void TestPairsReturned3d() throw (Exception)
+    void TestPairsReturned3d()
     {
         if (PetscTools::GetNumProcs() > 3)
         {
@@ -2081,7 +2083,7 @@ public:
         }
     }
 
-    void TestSplitNeighbourCalculation() throw (Exception)
+    void TestSplitNeighbourCalculation()
     {
         std::vector<Node<2>* > nodes;
         for (unsigned j=0; j<3; j++)
@@ -2239,7 +2241,7 @@ public:
         }
     }
 
-    void TestPairsReturned2dPeriodic() throw (Exception)
+    void TestPairsReturned2dPeriodic()
     {
         EXIT_IF_PARALLEL;
 
@@ -2401,10 +2403,9 @@ public:
     }
 
     void TestBoxGeneration3d() throw (Exception)
-    {
+
         // Create a mesh
         TetrahedralMesh<3,3> mesh;
-        mesh.ConstructCuboid(4,5,6);
 
         double cut_off_length = 2.0;
 
@@ -2542,7 +2543,7 @@ public:
         }
     }
 
-    void TestArchivingDistributedBoxCollection() throw(Exception)
+    void TestArchivingDistributedBoxCollection()
     {
          FileFinder archive_dir("archive", RelativeTo::ChasteTestOutput);
          std::string archive_file = "box_collection.arch";
@@ -2603,7 +2604,7 @@ public:
          }
     }
 
-    void TestLoadBalanceFunction() throw (Exception)
+    void TestLoadBalanceFunction()
     {
         // This test is designed for 3 process environment. Tests that an equal spread of load results
         // in an equal spread of the domain size between processes.
@@ -2672,7 +2673,7 @@ public:
      * can encounter problems of domain shrinking to zero size at the next load balance. This test
      * makes sure that this cannot happen.
      */
-    void TestLoadBalanceMaintainsMinimumLocalRegion() throw (Exception)
+    void TestLoadBalanceMaintainsMinimumLocalRegion()
     {
         if (PetscTools::GetNumProcs() == 3)
         {
@@ -2699,7 +2700,7 @@ public:
         }
     }
 
-    void TestGetDistributionOfNodes() throw (Exception)
+    void TestGetDistributionOfNodes()
     {
         double cut_off_length = 1.0;
 
