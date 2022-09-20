@@ -1,3 +1,10 @@
+This is the repository for the version of Chaste I used to generate the results for the following papers during my PhD:
+
+  - Claire Miller, Edmund Crampin, James M. Osborne (2021). Maintaining the proliferative cell niche in multicellular models of epithelia, Journal of Theoretical Biology, Volume 527, 110807. https://doi.org/10.1016/j.jtbi.2021.110807.
+  - Miller C, Crampin E, Osborne JM (2022) Multiscale modelling of desquamation in the interfollicular epidermis. PLoS Comput Biol 18(8): e1010368. https://doi.org/10.1371/journal.pcbi.1010368
+  
+This is to ensure reproducibility in case of a loss of backwards compatability with the core Chaste code base. Below is the standard usage information from the Chaste github readme. 
+
 # Welcome to Chaste 
 
 If you are new to Chaste please see [our Getting Started wiki page](https://chaste.cs.ox.ac.uk/trac/wiki/GettingStarted).
